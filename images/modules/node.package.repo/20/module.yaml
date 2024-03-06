@@ -1,0 +1,6 @@
+schema_version: 1
+version: 20
+name: node.package.repo
+description: "Add the nodejs repo to the package manager"
+execute:
+  - script: configure

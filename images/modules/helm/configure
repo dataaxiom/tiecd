@@ -1,0 +1,15 @@
+#!/bin/sh
+# Configure module
+set -e
+
+if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then
+  cp /tmp/artifacts/helm-arm64.tar.gz /tmp/artifacts/helm.tar.gz 
+else
+  cp /tmp/artifacts/helm-amd64.tar.gz /tmp/artifacts/helm.tar.gz 
+fi
+
+mkdir -p /tmp/artifacts/helm
+tar --strip-components=1 -xzvf /tmp/artifacts/helm.tar.gz -C /tmp/artifacts/helm
+cp /tmp/artifacts/helm/README.md /opt/dataaxiom/3rdparty/README.helm.md
+cp /tmp/artifacts/helm/LICENSE /opt/dataaxiom/3rdparty/LICENSE.helm
+cp /tmp/artifacts/helm/helm /usr/bin/helm

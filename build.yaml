@@ -1,0 +1,13 @@
+targets:
+  $default:
+    builders:
+      json_serializable|json_serializable:
+        # This will only generate code for files 
+        # in a "api" folder.
+        generate_for:
+          - "**/api/**.dart"
+        options:
+          any_map: true
+          checked: true
+          explicit_to_json: true
+          include_if_null: false

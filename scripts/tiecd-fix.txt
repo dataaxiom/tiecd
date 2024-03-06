@@ -1,0 +1,2 @@
+ARG TARGETPLATFORM
+COPY tiecd.arm64 /usr/bin/

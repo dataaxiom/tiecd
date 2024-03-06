@@ -1,0 +1,14 @@
+#!/bin/sh
+# Configure module
+set -e
+
+if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then
+  cp /tmp/artifacts/oc-arm64.tar.gz /tmp/artifacts/oc.tar.gz
+else
+  cp /tmp/artifacts/oc-amd64.tar.gz /tmp/artifacts/oc.tar.gz
+fi
+
+mkdir -p /tmp/artifacts/oc
+tar -xzvf /tmp/artifacts/oc.tar.gz -C /tmp/artifacts/oc
+cp /tmp/artifacts/oc/README.md /opt/dataaxiom/3rdparty/README.oc.md
+cp /tmp/artifacts/oc/oc /usr/bin/oc

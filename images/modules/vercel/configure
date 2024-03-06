@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+
+echo "Installing vercel cli"
+npm i --verbose -g vercel@33.6.1
+npm i -g pnpm@8.15.4

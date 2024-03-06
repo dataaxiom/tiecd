@@ -1,0 +1,11 @@
+schema_version: 1
+version: "11"
+name: jdk
+description: "OpenJDK 11"
+envs:
+- name: "TIECD_JDK_VERSION"
+  value: "11"
+packages:
+  manager: apt-get
+  install:
+    - openjdk-11-jdk

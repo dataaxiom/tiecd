@@ -1,0 +1,11 @@
+schema_version: 1
+version: "21"
+name: jdk
+description: "OpenJDK 21"
+envs:
+- name: "TIECD_JDK_VERSION"
+  value: "21"
+packages:
+  manager: apt-get
+  install:
+    - openjdk-21-jdk

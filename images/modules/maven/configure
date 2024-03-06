@@ -1,0 +1,8 @@
+#!/bin/sh
+# Configure module
+set -e
+
+mkdir -p /tmp/artifacts/maven
+tar --strip-components=1 -xzvf /tmp/artifacts/apache-maven.tar.gz -C /tmp/artifacts/maven
+mkdir -p /opt
+cp -R /tmp/artifacts/maven /opt

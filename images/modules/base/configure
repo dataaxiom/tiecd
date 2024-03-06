@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+mkdir -p /opt/dataaxiom/3rdparty
+
+# fix up arm64 build
+if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then
+  cp /usr/bin/tiecd.arm64 /usr/bin/tiecd
+  chmod +x /usr/bin/tiecd
+fi
+
+if [ -f /usr/bin/tiecd.arm64 ]; then
+  rm /usr/bin/tiecd.arm64
+fi

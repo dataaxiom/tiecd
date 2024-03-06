@@ -1,0 +1,11 @@
+schema_version: 1
+version: "17"
+name: jdk
+description: "OpenJDK 17"
+envs:
+- name: "TIECD_JDK_VERSION"
+  value: "17"
+packages:
+  manager: apt-get
+  install:
+    - openjdk-17-jdk

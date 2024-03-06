@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+
+echo "Installing pnpm"
+npm i -g pnpm@8.15.4

@@ -1,0 +1,10 @@
+schema_version: 1
+version: 1.0.0
+name: gradle
+description: "gradle build utility"
+artifacts:
+  - name: "gradle.zip"
+    url: "https://services.gradle.org/distributions/gradle-8.6-bin.zip"
+    sha256: "9631d53cf3e74bfa726893aee1f8994fee4e060c401335946dba2156f440f24c"
+execute:
+  - script: configure

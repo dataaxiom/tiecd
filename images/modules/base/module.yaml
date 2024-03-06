@@ -1,0 +1,33 @@
+schema_version: 1
+version: 1.0.0
+name: base
+description: "Add the base packages and tiecd software and setup"
+packages:
+  manager: apt-get
+  install:
+    - curl
+    - ca-certificates
+    - gpg
+    - git
+    - gettext
+    - jq
+    - apache2-utils
+    - skopeo
+    - umoci
+    - unzip
+    - lsb-release
+artifacts:
+  - name: "tiecd"
+    path: "build/tiecd"
+    dest: "/usr/bin"
+  - name: "umoci-perm.sh"
+    path: "build/umoci-perm.sh"
+    dest: "/usr/bin"
+  - name: "LICENSE"
+    path: "build/LICENSE"
+    dest: "/opt/dataaxiom"
+  - name: "oss_license.json"
+    path: "build/oss_licenses.json"
+    dest: "/opt/dataaxiom/3rdparty"
+execute:
+  - script: configure

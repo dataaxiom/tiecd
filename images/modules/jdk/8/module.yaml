@@ -1,0 +1,11 @@
+schema_version: 1
+version: "8"
+name: jdk
+description: "OpenJDK 1.8.0"
+envs:
+- name: "TIECD_JDK_VERSION"
+  value: "8"
+packages:
+  manager: apt-get
+  install:
+    - openjdk-8-jdk

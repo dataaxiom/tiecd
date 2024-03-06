@@ -1,0 +1,21 @@
+schema_version: 1
+
+name: "ghcr.io/dataaxiom/tiecd"
+description: "Pipeline tools for cloud deployments"
+version: latest
+from: "ubuntu:22.04" 
+
+envs:
+  - name: TIECD_NODE_VERSION
+    value: "18"
+
+modules:
+  repositories:
+    - path: modules
+  install:
+    - name: base
+    - name: node.package.repo 
+      version: "18"
+    - name: node
+    - name: yarn
+    - name: pnpm

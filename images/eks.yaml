@@ -1,0 +1,16 @@
+schema_version: 1
+
+name: "ghcr.io/dataaxiom/tiecd"
+description: "Pipeline tools for cloud deployments"
+version: latest
+from: "ubuntu:22.04"
+
+modules:
+  repositories:
+    - path: modules
+  install:
+    - name: base
+    - name: helm
+    - name: google.package.repo
+    - name: kubectl
+    - name: awscli

@@ -1,0 +1,188 @@
+name: build
+run-name: build
+on: 
+  push:
+    branches: [ "*" ]
+    tags:
+      - "v*"
+
+env:
+  FLUTTER_ROOT: dummy
+
+jobs:
+
+  tiecd-build-amd64:
+    runs-on: ubuntu-latest
+    container:
+      image: 'ghcr.io/dataaxiom/dart-linux:latest'
+    steps:
+    - name: Check out repo
+      uses: actions/checkout@v4
+    - name: Generate OSS licenses
+      run: dart pub run flutter_oss_licenses:generate.dart -o oss_licenses.json --json
+    - name: Dart build
+      run: dart run build_runner build
+    - name: Dart executable build
+      run: dart compile exe bin/tiecd.dart -o bin/tiecd
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts-amd64
+        path: |
+          bin/tiecd
+          oss_licenses.json
+        retention-days: 1
+
+  tiecd-build-arm64:
+    runs-on: [self-hosted, linux, ARM64]
+    container:
+      image: 'ghcr.io/dataaxiom/dart-linux:latest'
+    steps:
+    - name: Check out repo
+      uses: actions/checkout@v4
+    - name: Generate OSS licenses
+      run: dart pub run flutter_oss_licenses:generate.dart -o oss_licenses.json --json
+    - name: Dart build
+      run: dart run build_runner build
+    - name: Dart executable build
+      run: dart compile exe bin/tiecd.dart -o bin/tiecd.arm64
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts-arm64
+        path: bin/tiecd.arm64
+        retention-days: 1
+
+  # single arch images (amd64) using cekit fully
+  image-build-single-arch:
+
+    runs-on: ubuntu-latest
+
+    needs: [tiecd-build-amd64]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [
+          'jdk8','jdk11','jdk17','jdk21','flutter','vercel'
+        ]
+    steps:
+    - name: Check out repo
+      uses: actions/checkout@v4
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: build-artifacts-*
+        merge-multiple: true
+
+    - name: Set amd exec bit
+      run: chmod +x bin/tiecd
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ghcr.io/${{ github.repository_owner }}/tiecd
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install CEKit
+      uses: cekit/actions-setup-cekit@v1.1.5
+
+    - name: Save Tags
+      run: echo "${{ steps.meta.outputs.tags }}" >> tags.txt
+
+    - name: Save Labels
+      run: echo "${{ steps.meta.outputs.labels }}" >> labels.txt
+
+    - name: Build ${{ matrix.image }} Image
+      run: scripts/build-image.sh ${{ matrix.image }}
+
+
+  # multi arch builds, uses cekit to generate dockerfile, then buildx for actual build
+  # as cekit doesn't currently support buildx
+  
+  image-build-multi-arch:
+
+    runs-on: ubuntu-latest
+
+    needs: [tiecd-build-amd64,tiecd-build-arm64]
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [
+          'base','k8s','okd','gke','eks','aks','node18','node20'
+        ]
+    steps:
+
+    - name: Check out repo
+      uses: actions/checkout@v4
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: build-artifacts-*
+        merge-multiple: true
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Install CEKit
+      uses: cekit/actions-setup-cekit@v1.1.5
+
+    - name: Set amd exec bit
+      run: chmod +x bin/tiecd
+
+    - name: Generate Dockerfile for ${{ matrix.image }} image
+      run: scripts/generate-build.sh ${{ matrix.image }}
+
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository_owner }}/tiecd
+        labels: |
+          org.opencontainers.image.vendor=Dataaxiom Inc
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+
+    - name: Save Tags
+      run: echo "${{ steps.meta.outputs.tags }}" >> tags.txt
+
+    - name: Generate Image Tags
+      id: gentags
+      run: |
+        tags=$(scripts/generate-tags.sh ${{ matrix.image }})
+        echo "tags=$tags" >> $GITHUB_OUTPUT
+        echo Using tags $image_tags
+
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker images
+      uses: docker/build-push-action@v5
+      with:
+        context: target/image
+        push: true
+        platforms: linux/arm64,linux/amd64
+        provenance: false
+        tags: ${{ steps.gentags.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        annotations: ${{ steps.meta.outputs.labels }}

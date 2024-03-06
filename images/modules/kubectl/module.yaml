@@ -1,0 +1,8 @@
+schema_version: 1
+version: 1.0.0
+name: kubectl
+description: "Add the Google kubectl package"
+packages:
+  manager: apt-get
+  install:
+    - kubectl=1:468.0.0-0

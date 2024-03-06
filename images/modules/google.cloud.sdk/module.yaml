@@ -1,0 +1,9 @@
+schema_version: 1
+version: 1.0.0
+name: google.cloud.sdk
+description: "Add the Google google-cloud-sdk packages"
+packages:
+  manager: apt-get
+  install:
+    - google-cloud-sdk=467.0.0-0
+    - google-cloud-sdk-gke-gcloud-auth-plugin=467.0.0-0

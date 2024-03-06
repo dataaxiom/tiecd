@@ -1,0 +1,13 @@
+schema_version: 1
+version: 1.0.0
+name: okd.client
+description: "Add the OKD oc client"
+artifacts:
+  - name: "oc-amd64.tar.gz"
+    url: "https://github.com/okd-project/okd/releases/download/4.15.0-0.okd-2024-02-23-163410/openshift-client-linux-4.15.0-0.okd-2024-02-23-163410.tar.gz"
+    sha256: "a4aaa51d38f1e4eb37195cb064ba88e5c1009373bb98886f05af3e28ef326112"
+  - name: "oc-arm64.tar.gz"
+    url: "https://github.com/okd-project/okd/releases/download/4.15.0-0.okd-2024-03-10-010116/openshift-client-linux-arm64-4.15.0-0.okd-2024-03-10-010116.tar.gz"
+    sha256: "846fefd8491fd404d0b4d248d2eeda3d76a3a79aa95cab3523f89ee4fbfca136"
+execute:
+  - script: configure

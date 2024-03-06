@@ -1,0 +1,20 @@
+schema_version: 1
+
+name: "ghcr.io/dataaxiom/tiecd"
+description: "Pipeline tools for cloud deployments"
+version: latest
+from: "ubuntu:22.04"
+
+envs:
+  - name: PATH
+    value: "$PATH:/opt/maven/bin:/opt/gradle/bin"
+
+modules:
+  repositories:
+    - path: modules
+  install:
+    - name: base
+    - name: jdk
+      version: "11"
+    - name: gradle
+    - name: maven
