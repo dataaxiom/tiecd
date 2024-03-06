@@ -4,3 +4,4 @@
 .dart_tool/
 tiecd
 *.g.dart
+oss_licenses.json

@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim
 
-LABEL org.opencontainers.image.description "Simplified CICD Toolchain"
+LABEL org.opencontainers.image.description "A simplified CICD toolchain for kubernetes deployments."
 
 ENV LANG=en_US.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
@@ -36,6 +36,6 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-#COPY dist/third-party-licenses.txt /usr/local/bin/dist/third-party-licenses.txt
-#COPY LICENSE /usr/local/bin/dist/LICENSE
+COPY oss_licenses.json /opt/dataaxiom/3rdparty/oss_licenses.json
+COPY LICENSE /opt/dataaxiom/LICENSE
 COPY bin/tiecd /opt/dataaxiom/bin/tiecd
