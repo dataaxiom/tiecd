@@ -49,7 +49,7 @@ environments:
 - apiConfig: ${KUBE_CONFIG_FILE}
 
 apps:
-- name: "webapp"
+- name: webapp
   image:
     version: 1.0.1
     type: springboot
