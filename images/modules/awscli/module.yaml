@@ -1,0 +1,10 @@
+schema_version: 1
+version: 1.0.0
+name: awscli
+description: "Add the awscli utility"
+packages:
+  manager: apt-get
+  install:
+    - unzip
+execute:
+  - script: configure

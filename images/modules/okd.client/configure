@@ -1,0 +1,8 @@
+#!/bin/sh
+# Configure module
+set -e
+
+mkdir -p /tmp/artifacts/oc
+tar -xzvf /tmp/artifacts/okd-client.tar.gz -C /tmp/artifacts/oc
+cp /tmp/artifacts/oc/README.md /opt/dataaxiom/3rdparty/README.oc.md
+cp /tmp/artifacts/oc/oc /usr/bin/oc

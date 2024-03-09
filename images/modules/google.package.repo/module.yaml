@@ -1,0 +1,6 @@
+schema_version: 1
+version: 1.0.0
+name: google.package.repo
+description: "Add the Google repo to the package manager"
+execute:
+  - script: configure

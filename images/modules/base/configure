@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+
+mkdir -p /opt/dataaxiom/3rdparty
+pwd
+

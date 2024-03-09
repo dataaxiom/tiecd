@@ -1,0 +1,9 @@
+#!/bin/sh
+# Configure module
+set -e
+
+mkdir -p /tmp/artifacts/helm
+tar --strip-components=1 -xzvf /tmp/artifacts/helm.tar.gz -C /tmp/artifacts/helm
+cp /tmp/artifacts/helm/README.md /opt/dataaxiom/3rdparty/README.helm.md
+cp /tmp/artifacts/helm/LICENSE /opt/dataaxiom/3rdparty/LICENSE.helm
+cp /tmp/artifacts/helm/helm /usr/bin/helm

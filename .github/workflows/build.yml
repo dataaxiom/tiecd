@@ -34,6 +34,12 @@ jobs:
   docker-build:
     runs-on: ubuntu-latest
     needs: dart-build
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [
+          'full', 'k8s', 'okd', 'gke', 'eks'
+        ]
     steps:
     - name: Check out repo
       uses: actions/checkout@v3
@@ -43,13 +49,6 @@ jobs:
         name: build-artifacts
     - name: Set exec bit
       run: chmod +x bin/tiecd
-    - name: Log in to the Container registry
-      uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Extract metadata (tags, labels) for Docker
       id: meta
       uses: docker/metadata-action@v4
@@ -59,11 +58,15 @@ jobs:
           type=ref,event=branch
           type=ref,event=pr
           type=semver,pattern={{version}}
- 
-    - name: Build and push Docker images
-      uses: docker/build-push-action@v4
+    - name: Log in to the Container registry
+      uses: docker/login-action@v3
       with:
-        context: .
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install CEKit
+      uses: cekit/actions-setup-cekit@v1.1.5
+    - name: Save tags
+      run: echo "${{ steps.meta.outputs.tags }}" >> tags.txt
+    - name: Build ${{ matrix.image }} Image
+      run: scripts/build-image.sh ${{ matrix.image }}
