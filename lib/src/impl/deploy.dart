@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:intl/intl.dart';
 import 'package:tiecd/src/impl/base.dart';
+import 'package:tiecd/src/providers/gke_provider.dart';
 import 'package:yaml/yaml.dart';
 
 import '../api/dsl.dart';
@@ -17,7 +18,7 @@ class Deploy extends BaseExecutor {
     // if we haven't and apiType and we have apiConfig set check if it's kubernetes
     if (environment.apiType == null && environment.apiConfig != null) {
       var kubeConfig = loadYaml(environment.apiConfig!);
-      if (kubeConfig["kind"] == "Config") {
+      if (kubeConfig is Map && kubeConfig["kind"] == "Config") {
         environment.apiType = "kubernetes";
       }
     }
@@ -68,12 +69,19 @@ class Deploy extends BaseExecutor {
 
       for (var environment in environments) {
 
+        // lets take a copy to support to expand on that
+        environment = environment.clone();
+
         preExpandEnvironment(environment);
         TieProvider provider;
         if (environment.apiType == null) {
           throw TieError('provider type is not set');
         } else if (environment.apiType == "kubernetes") {
-          provider = KubernetesProvider(config);
+          if (environment.apiProvider == "gke") {
+            provider = GKEProvider(config);
+          } else {
+            provider = KubernetesProvider(config);
+          }
         } else {
           throw TieError('provider ${environment.apiType} type is not supported');
         }
@@ -133,12 +141,11 @@ class Deploy extends BaseExecutor {
           } else {
             throw TieError('unknown action type: $action on app "${app.name}"');
           }
-          await provider.logoff(context);
 
         } catch (error) {
           rethrow;
         } finally {
-          provider.logoff(context);
+          await provider.logoff(context);
         }
       }
     } else {

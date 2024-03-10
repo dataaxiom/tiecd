@@ -57,21 +57,62 @@ class Repositories {
 class Environment {
   String? name;
   String? label;
-  String? apiType;
-  String? apiProvider;
+  String? apiType;  // currently only 'kubernetes
+  String? apiProvider; // refined target provider, currently gke
+
+  // direct connectivity options
   String? apiUrl;
   bool? apiTlsVerify;
   String? apiToken;
-  String? apiClientCert;
   String? apiClientKey;
-  String? apiClientCA;
-  String? apiConfig; // full config file
+  String? apiClientKeyFile;
+
+  String? apiClientCert; // not for direct use currently
+  //String? apiClientCertFile;
+  String? apiClientCA; // not for direct use currently
+  //String? apiClientCAFile;
+
+  // full config file such as a kube_config file
+  String? apiConfig;  // direct contents
+  String? apiConfigFile;  // file containing config file
+
+  // public cloud config
+  String? serviceAccountName;
+  String? projectId;
+  String? zone;
+
   String? namespace;
   ImageRepository? repository;
 
   Environment();
   factory Environment.fromJson(Map json) => _$EnvironmentFromJson(json);
   Map<String, dynamic> toJson() => _$EnvironmentToJson(this);
+
+  // basic clone to allow expansion to work with login/logff
+  Environment clone() {
+    Environment clone = Environment();
+    clone.name = name;
+    clone.label = label;
+    clone.apiType = apiType;
+    clone.apiProvider = apiProvider;
+    clone.apiUrl = apiUrl;
+    clone.apiTlsVerify = apiTlsVerify;
+    clone.apiToken = apiToken;
+    clone.apiClientKey = apiClientKey;
+    clone.apiClientKeyFile = apiClientKeyFile;
+    clone.apiClientCert = apiClientCert;
+    //String? apiClientCertFile;
+    clone.apiClientCA = apiClientCA;
+    //String? apiClientCAFile;
+    clone.apiConfig = apiConfig;
+    clone.apiConfigFile = apiConfigFile;
+    clone.serviceAccountName = serviceAccountName;
+    clone.projectId = projectId;
+    clone.zone = zone;
+    clone.namespace = namespace;
+    clone.repository = repository; // not a deep copy
+    return clone;
+  }
 }
 
 enum Action { install, uninstall }

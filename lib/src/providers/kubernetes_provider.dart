@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:http/io_client.dart';
 import 'package:json2yaml/json2yaml.dart';
+import 'package:meta/meta.dart';
 import 'package:posix/posix.dart';
 import 'package:uuid/uuid.dart';
 import 'package:yaml/yaml.dart';
@@ -25,15 +26,33 @@ class KubernetesProvider implements TieProvider {
   Config _config;
   String? _kubeConfigFilename;
   KubernetesClient? _kubernetesClient;
+  KubernetesClient? kubernetesClient;
   IOClient? _ioClient;
+
+  @protected String? get kubeConfigFilename => _kubeConfigFilename;
+  @protected set kubeConfigFilename(newValue) {
+    _kubeConfigFilename = newValue;
+  }
+  @protected Config get config => _config;
 
   KubernetesProvider(this._config) {
     _kubeConfigFilename = "${_config.scratchDir}/${Uuid().v4()}";
   }
 
+
   @override
-  void expandEnvironment(Environment environment) {
-    // if we have an apiConfig set to a KUBE_CONFIG file expand the values if necessary
+  Future<void> expandEnvironment(Environment environment) async {
+
+    // if apiConfigFile is set load it
+    if (environment.apiConfigFile != null) {
+      if (!File(environment.apiConfigFile!).existsSync()) {
+        throw TieError("api config file: ${environment.apiConfigFile} does not exist");
+      } else {
+        environment.apiConfig ??= File(environment.apiConfigFile!).readAsStringSync();
+      }
+    }
+
+    // if we have an apiConfig set to a KUBE_CONFIG file extract the values
     if (environment.apiConfig != null) {
       var kubeConfig = loadYaml(environment.apiConfig!);
       if (kubeConfig['kind'] == 'Config') {
@@ -54,7 +73,7 @@ class KubernetesProvider implements TieProvider {
                 if (clusterName == cluster['name']) {
                   environment.apiUrl ??= cluster['cluster']['server'];
                   environment.apiClientCA ??=
-                      cluster['cluster']['certificate-authority-data'];
+                  cluster['cluster']['certificate-authority-data'];
                   break;
                 }
               }
@@ -64,10 +83,37 @@ class KubernetesProvider implements TieProvider {
                 if (userName == user['name']) {
                   environment.apiToken ??= user['user']['token'];
                   environment.apiClientCert ??=
-                      user['user']['client-certificate-data'];
+                  user['user']['client-certificate-data'];
                   environment.apiClientKey ??= user['user']['client-key-data'];
+
+                  // check if the user credential is external
+                  if (user['user']['exec'] != null) {
+                    var command = user['user']['exec']['command'];
+                    if (command != null) {
+                      //  run the external credential provider
+                      var result = await Process.run(command, [], runInShell: true);
+                      if (result.exitCode == 0) {
+                        var response = result.stdout;
+                        final authResult = jsonDecode(response);
+                        var kind = authResult['kind'];
+                        if (kind != null && kind == 'ExecCredential') {
+                          if (authResult['status'] != null) {
+                            environment.apiToken = authResult['status']['token'];
+                          } else {
+                            throw TieError("unknown credential status response: $response");
+                          }
+                        } else {
+                          throw TieError("unknown credential type: $kind");
+                        }
+                      } else {
+                        throw TieError("could not get external credentials");
+                      }
+                    }
+                  }
+
                   break;
                 }
+
               }
               break;
             }
@@ -75,31 +121,33 @@ class KubernetesProvider implements TieProvider {
         }
       }
     }
-
-    var environmentName = environment.name;
-    environmentName ??= '';
-    if (environment.apiUrl == null) {
-      throw TieError("cluster $environmentName apiUrl is not set");
-    }
-    if (environment.apiToken == null &&
-        environment.apiClientCert == null &&
-        environment.apiClientKey == null) {
-      throw TieError(
-          "cluster $environmentName apiToken or apiClientCert/apiClientKey is not set");
-    }
-
-    // if we still don't have a name
-    environment.name ??= environment.apiUrl;
   }
 
   @override
   Future<void> login(TieContext tieContext) async {
-    // todo - make this configurable when full native kube client is working - for kubectl support from scripts
-    if (tieContext.environment.apiConfig != null) {
-      File(_kubeConfigFilename!)
-          .writeAsStringSync(tieContext.environment.apiConfig!, flush: true);
-      // set restricted file permissions
-      chmod(_kubeConfigFilename!, "400");
+
+    var environmentName = tieContext.environment.name;
+    environmentName ??= '';
+    if (tieContext.environment.apiUrl == null) {
+      throw TieError("cluster $environmentName apiUrl is not set");
+    }
+    if (tieContext.environment.apiToken == null &&
+        tieContext.environment.apiClientCert == null &&
+        tieContext.environment.apiClientKey == null) {
+      throw TieError(
+          "cluster $environmentName apiToken or apiClientCert/apiClientKey is not set");
+    }
+    // if we still don't have a name
+    tieContext.environment.name ??= tieContext.environment.apiUrl;
+
+    // only output if file level config isn't already created
+    if (!File(_kubeConfigFilename!).existsSync()) {
+      if (tieContext.environment.apiConfig != null) {
+        File(_kubeConfigFilename!)
+            .writeAsStringSync(tieContext.environment.apiConfig!, flush: true);
+        // set restricted file permissions
+        chmod(_kubeConfigFilename!, "400");
+      }
     }
     SecurityContext context = SecurityContext(withTrustedRoots: true);
     HttpClient httpClient = HttpClient(context: context);
