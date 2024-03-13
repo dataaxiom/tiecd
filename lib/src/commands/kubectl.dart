@@ -57,13 +57,8 @@ class KubeCtlCommand {
       args.add("--wait=true");
       Log.info("applying template: $filename");
 
-      if (_config.traceCommands) {
-        var command = 'kubectl apply -f $filename ';
-        for (var arg in args) {
-          command += '$arg ';
-        }
-        Log.info(command);
-      }
+      Log.traceCommand(_config, 'kubectl apply -f $filename', args);
+
       var kubeProperties = Map.of(properties);
       kubeProperties["KUBECONFIG"] = _kubeConfigFile;
       args = ['apply', '-f', processedFilename, ...args];
@@ -106,6 +101,7 @@ class KubeCtlCommand {
         '--template={{.status.observedGeneration}}',
         ...args
       ];
+      Log.traceCommand(_config, 'kubectl', args);
       var result = await Process.run('kubectl', args,
           environment: kubeProperties, runInShell: true);
       if (result.exitCode == 0) {
@@ -126,6 +122,9 @@ class KubeCtlCommand {
     var kubeProperties = <String, String>{};
     kubeProperties['KUBECONFIG'] = _kubeConfigFile;
     args = ['rollout', 'status', '$type/$name', '--watch=true', ...args];
+
+    Log.traceCommand(_config, 'kubectl', args);
+
     var process = await Process.start('kubectl', args,
         environment: kubeProperties, runInShell: true);
     process.stdout.transform(utf8.decoder).forEach(print);

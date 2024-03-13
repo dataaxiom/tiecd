@@ -23,11 +23,7 @@ class HelmCommand {
 
   Future<void> addRepo(TieContext tieContext, HelmChart chart) async {
     var args = ['repo','add', 'repo', (chart.url!)];
-
-    if (_config.traceCommands) {
-      Log.info('helm repo add repo ${chart.url!}');
-    }
-
+    Log.traceCommand(_config, 'helm', args);
     var kubeProperties = Map.of(tieContext.getEnv());
     kubeProperties["KUBECONFIG"] = _kubeConfigFile;
     kubeProperties['HELM_CACHE_HOME'] = "${_config.scratchDir}/${_tempDir!}/cache";
@@ -48,11 +44,7 @@ class HelmCommand {
 
   Future<void> update(TieContext tieContext) async {
     var args = ['repo','update'];
-
-    if (_config.traceCommands) {
-      Log.info('helm repo update');
-    }
-
+    Log.traceCommand(_config, 'helm', args);
     var kubeProperties = Map.of(tieContext.getEnv());
     kubeProperties["KUBECONFIG"] = _kubeConfigFile;
     kubeProperties['HELM_CACHE_HOME'] = "${_config.scratchDir}/${_tempDir!}/cache";
@@ -193,9 +185,7 @@ class HelmCommand {
       args.add('--namespace=$namespace');
     }
 
-    if (_config.traceCommands) {
-      Log.info('helm ${_generateCommand(args)}');
-    }
+    Log.traceCommand(_config, 'helm', args);
 
     var kubeProperties = Map.of(tieContext.getEnv());
     kubeProperties["KUBECONFIG"] = _kubeConfigFile;
@@ -225,13 +215,3 @@ class HelmCommand {
     }
   }
 }
-
-String _generateCommand(List<String> args) {
-  StringBuffer output = StringBuffer();
-  for (var arg in args) {
-    output.write(arg);
-    output.write(" ");
-  }
-  return output.toString();
-}
-
