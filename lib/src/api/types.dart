@@ -10,7 +10,7 @@ class Config {
   bool appNamesRequired = false;
   bool ignoreErrors = false;
   bool traceArtifacts = false;
-  bool traceCommands = false;
+  bool traceCommands = true;
   bool banner = true;
   String scratchDir = ".tiecd";
 }
