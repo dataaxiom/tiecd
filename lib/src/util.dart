@@ -1,9 +1,8 @@
-
-
 import 'dart:convert';
 import 'dart:io';
 
 import 'api/provider.dart';
+import 'api/types.dart';
 
 String varExpandByLine(String value, String fileExtension) {
   return varExpandByLineWithProperties(value, fileExtension, null);
@@ -11,9 +10,10 @@ String varExpandByLine(String value, String fileExtension) {
 
 Map<String, String> envVars = Platform.environment;
 
-
-String varExpandByLineWithProperties(String value, String fileExtension, Map<String, String>? properties) {
-  var regexp = RegExp(r'\${([A-Za-z0-9_]+)(?::([^}]*))?}|"\${([A-Za-z0-9_]+)(?::([^}]*))?}"|{{([A-Za-z0-9_]+)(?::([^}]*))?}}|"{{([A-Za-z0-9_]+)(?::([^}]*))?}}"');
+String varExpandByLineWithProperties(
+    String value, String fileExtension, Map<String, String>? properties) {
+  var regexp = RegExp(
+      r'\${([A-Za-z0-9_]+)(?::([^}]*))?}|"\${([A-Za-z0-9_]+)(?::([^}]*))?}"|{{([A-Za-z0-9_]+)(?::([^}]*))?}}|"{{([A-Za-z0-9_]+)(?::([^}]*))?}}"');
   final newString = value.replaceAllMapped(regexp, (Match match) {
     var isQuoted = false;
     var isMultiLine = false;
@@ -82,7 +82,6 @@ String varExpandByLineWithProperties(String value, String fileExtension, Map<Str
         //shouldn't be here
         return varname;
       }
-
     } else {
       // restore quotes if necessary
       if (isQuoted && !isMultiLine) {
@@ -118,17 +117,20 @@ String expandFileByName(String filename) {
   return builder.toString();
 }
 
-String expandFileByContentsWithProperties(String value, String fileExtension, Map<String, String>? properties) {
+String expandFileByContentsWithProperties(
+    String value, String fileExtension, Map<String, String>? properties) {
   var builder = '';
   LineSplitter splitter = LineSplitter();
   List<String> lines = splitter.convert(value);
-  for(var line in lines) {
-    builder += '${varExpandByLineWithProperties(line, fileExtension, properties)}\n';
+  for (var line in lines) {
+    builder +=
+        '${varExpandByLineWithProperties(line, fileExtension, properties)}\n';
   }
   return builder;
 }
 
-String expandFileByNameWithProperties(String filename, Map<String, String>? properties) {
+String expandFileByNameWithProperties(
+    String filename, Map<String, String>? properties) {
   var builder = '';
   var value = File(filename).readAsStringSync();
   var extension = '';
@@ -139,12 +141,13 @@ String expandFileByNameWithProperties(String filename, Map<String, String>? prop
   return builder;
 }
 
-
 bool isPassword(String value) {
   var lower = value.toLowerCase();
-  if (lower.contains('pass') || lower.contains('secret') ||
-    lower.contains('pwd') || lower.contains('token') ||
-    lower.contains('enc(')) {
+  if (lower.contains('pass') ||
+      lower.contains('secret') ||
+      lower.contains('pwd') ||
+      lower.contains('token') ||
+      lower.contains('enc(')) {
     return true;
   } else {
     return false;
@@ -173,5 +176,40 @@ List<String> split(String string, String separator, {int max = 0}) {
   return result;
 }
 
+void sanitizeString(Config config, String key, String value, Map<String, dynamic> json) {
+  bool isSecret = false;
+  for (var label in config.secretLabelSet) {
+    if ((key == 'apiConfig' || key == 'apiClientCA') &&
+        !(value.startsWith('\${') && value.endsWith('}'))) {
+      isSecret = true;
+      break;
+    }
+    if (key.toLowerCase().contains(label) &&
+        !(value.startsWith('\${') && value.endsWith('}'))) {
+      isSecret = true;
+      break;
+    }
+  }
+  if (isSecret) {
+    json[key] = '(removed)';
+  }
+}
 
-
+// walk down the doc and hash any secret values
+void sanitizeDoc(Config config, Map<String, dynamic> json) {
+  json.forEach((key, value) {
+    if (value is Map) {
+      sanitizeDoc(config, value as Map<String, dynamic>);
+    } else if (value is Iterable) {
+      for (var item in value) {
+        if (item is String) {
+          sanitizeString(config,key,item,json);
+        } else if (item is Map) {
+          sanitizeDoc(config, item as Map<String, dynamic>);
+        } // list?
+      }
+    } else if (value is String) {
+      sanitizeString(config,key,value,json);
+    }
+  });
+}

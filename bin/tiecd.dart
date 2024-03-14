@@ -146,10 +146,12 @@ void showHeader(Config config) {
     Log.info(' app-names-required:\t${config.appNamesRequired}');
     Log.info(' ignore-errors:\t\t${config.ignoreErrors}');
     Log.info(' verbose:\t\t${config.verbose}');
-    Log.info(' trace-artifacts:\t${config.traceArtifacts}');
-    Log.info(' trace-commands:\t\t${config.traceCommands}');
-    Log.info(' banner:\t\t\t${config.banner}');
-    Log.info(' create-namespaces:\t\t\t${config.createNamespaces}');
+    Log.info(' trace-generated:\t${config.traceGenerated}');
+    Log.info(' trace-tie-file:\t${config.traceTieFile}');
+    Log.info(' trace-commands:\t${config.traceCommands}');
+    Log.info(' secret-labels:\t\t${config.secretLabels}');
+    Log.info(' banner:\t\t${config.banner}');
+    Log.info(' create-namespaces:\t${config.createNamespaces}');
     Log.info(' ---');
   }
 }
@@ -178,14 +180,31 @@ Future<Config> buildConfig(final ArgResults argResults) async {
   config.ignoreErrors =
       setupBoolValue(argResults['ignore-errors'], 'TIECD_IGNORE_ERRORS');
   config.verbose = setupBoolValue(argResults['verbose'], 'TIECD_VERBOSE');
-  config.traceArtifacts =
-      setupBoolValue(argResults['trace-artifacts'], 'TIECD_TRACE_ARTIFACTS');
+  config.traceGenerated =
+      setupBoolValue(argResults['trace-generated'], 'TIECD_TRACE_GENERATED');
   config.traceCommands =
       setupBoolValue(argResults['trace-commands'], 'TIECD_TRACE_COMMANDS');
+  config.traceTieFile =
+      setupBoolValue(argResults['trace-tie-file'], 'TIECD_TRACE_TIE_FILE');
+  config.secretLabels =
+      setupStringValue(argResults['secret-labels'], 'TIECD_SECRET_LABELS');
   config.banner =
       setupBoolValue(argResults['banner'], 'TIECD_BANNER');
   config.createNamespaces =
       setupBoolValue(argResults['create-namespaces'], 'TIECD_CREATE_NAMESPACES');
+
+  // verbose mode overrides
+  if (config.verbose) {
+    config.traceTieFile = true;
+    config.traceCommands = true;
+    config.traceGenerated = true;
+  }
+
+  // post config init
+  var secetLabels = config.secretLabels.split('|');
+  for (var label in secetLabels) {
+    config.secretLabelSet.add(label.toLowerCase());
+  }
 
   showHeader(config);
 
@@ -275,19 +294,24 @@ Future<void> main(List<String> arguments) async {
       help:
           'ignore errors keep processing other apps [env: TIECD_IGNORE_ERRORS]');
   runner.argParser.addFlag('verbose',
-      abbr: 'v', defaultsTo: false, help: 'increase informational logging');
-  runner.argParser.addFlag('trace-artifacts',
-      abbr: 's',
+      abbr: 'v', defaultsTo: false, help: 'increase logging to include all tracing and informational logging');
+  runner.argParser.addFlag('trace-generated',
       defaultsTo: false,
       help:
-          'output generated and expanded artifacts [env: TIECD_TRACE_ARTIFACTS]');
+          'output generated artifacts [env: TIECD_TRACE_GENERATED]');
   runner.argParser.addFlag('trace-commands',
-      abbr: 'm',
       defaultsTo: false,
       help:
-          'output generated and expanded artifacts [env: TIECD_TRACE_COMMANDS]');
+          'output executed commands [env: TIECD_TRACE_COMMANDS]');
+  runner.argParser.addFlag('trace-tie-file',
+      defaultsTo: false,
+      help:
+      'output generated and expanded tie file [env: TIECD_TRACE_TIE_FILE]');
+  runner.argParser.addOption('secret-labels',
+      defaultsTo: 'password|secret|token|key|cert',
+      help:
+      'labels used to indicate secret values which will be redacted form conosle output [env: TIECD_SECRET_LABELS]');
   runner.argParser.addFlag('banner',
-      abbr: 't',
       defaultsTo: true,
       help:
       'show TIECD banner header during execution [env: TIECD_BANNER]');

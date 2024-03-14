@@ -9,8 +9,11 @@ class Config {
   String filePrefix = "tie";
   bool appNamesRequired = false;
   bool ignoreErrors = false;
-  bool traceArtifacts = false;
-  bool traceCommands = true;
+  bool traceGenerated = false;
+  bool traceCommands = false;
+  bool traceTieFile = false;
+  String secretLabels = 'password|secret|token|key|cert';
+  Set<String> secretLabelSet = {};
   bool banner = true;
   bool createNamespaces = true;
   String scratchDir = ".tiecd";

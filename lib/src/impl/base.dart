@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'dart:core';
 import 'dart:io';
+import 'package:json2yaml/json2yaml.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart';
 import 'package:tiecd/src/extensions.dart';
@@ -411,7 +413,7 @@ abstract class BaseExecutor {
     }
 
     // add gitlab
-    String? gitlabRepo = Platform.environment["CI_REGISTRY_IMAGE"];
+    String? gitlabRepo = Platform.environment["CI_REGISTRY"];
     if (gitlabRepo.isNotNullNorEmpty) {
       if (!reposByUrl.containsKey(gitlabRepo)) {
         var gitlab =  ImageRepository();
@@ -447,6 +449,13 @@ abstract class BaseExecutor {
           tieFile.repositories!.image!.add(gitlab);
         }
       }
+    }
+
+    if (tieFile.repositories != null && _config.traceTieFile) {
+      Log.info("Repositories in use:");
+      var contents = tieFile.repositories!.toJson();
+      sanitizeDoc(config,contents);
+      print(json2yaml(contents));
     }
   }
 

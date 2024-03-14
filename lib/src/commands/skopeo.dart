@@ -114,20 +114,21 @@ class SkopeoCommand {
     args.add('inspect');
     var outputString = 'skopeo inspect';
     if (srcRepo != null && srcRepo != "") {
-      if (srcUsername != null) {
-        args.add('--username');
-        args.add('$srcUsername');
-        outputString += ' --username ****';
-      }
-      if (srcPassword != null) {
-        args.add('--password');
-        args.add('$srcPassword');
-        outputString += ' --password ****';
+
+      if (srcUsername != null && srcPassword != null) {
+        args.add('--creds');
+        args.add('$srcUsername:$srcPassword');
+        outputString += ' --creds ****';
+      } else if (srcUsername != null && srcToken != null) {
+        args.add('--creds');
+        args.add('$srcUsername:$srcToken');
+        outputString += ' --creds ****';
       } else if (srcToken != null) {
-        args.add('--password');
-        args.add('$srcToken');
-        outputString += ' --password ****';
+        args.add('--creds');
+        args.add('token:$srcToken');
+        outputString += " --creds ****";
       }
+
       if (srcTlsVerify) {
         args.add('--tls-verify');
         outputString += ' --tls-verify';
