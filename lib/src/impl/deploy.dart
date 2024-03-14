@@ -69,7 +69,8 @@ class Deploy extends BaseExecutor {
 
       for (var environment in environments) {
 
-        // lets take a copy to support to expand on that
+        // lets take a clone copy to expand on that, to not effect the original
+        // on the next app round - simplifies expansion logic
         environment = environment.clone();
 
         preExpandEnvironment(environment);

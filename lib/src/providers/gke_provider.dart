@@ -55,8 +55,6 @@ class GKEProvider extends KubernetesProvider {
         }
       }
 
-
-
       // gcloud auth activate-service-account ci-cd-pipeline@PROJECT_ID.iam.gserviceaccount.com --key-file=gsa-key.json
       List<String> args = ['auth', 'activate-service-account', '${tieContext.environment.serviceAccountName}@${tieContext.environment.projectId}.iam.gserviceaccount.com', '--key-file=$_keyFile'];
       Log.traceCommand(config,'gcloud',args);
