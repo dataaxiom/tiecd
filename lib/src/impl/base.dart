@@ -497,7 +497,7 @@ abstract class BaseExecutor {
                 }
               } else {
                 // only throw error if we are using applist
-                if (_appList.isNotEmpty) {
+                if (_appList.isEmpty) {
                   throw TieError(
                       'app name \'$appName\' does not exist in file $file');
                 }
