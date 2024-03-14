@@ -12,6 +12,7 @@ class Config {
   bool traceArtifacts = false;
   bool traceCommands = true;
   bool banner = true;
+  bool createNamespaces = true;
   String scratchDir = ".tiecd";
 }
 

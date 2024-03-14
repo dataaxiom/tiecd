@@ -1,16 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:crypto/crypto.dart';
 import 'package:http/io_client.dart';
 import 'package:json2yaml/json2yaml.dart';
 import 'package:meta/meta.dart';
 import 'package:posix/posix.dart';
+import 'package:tiecd/src/extensions.dart';
 import 'package:uuid/uuid.dart';
 import 'package:yaml/yaml.dart';
-
 import 'package:kubernetes/kubernetes.dart';
-import 'package:http/http.dart' as http;
+import 'package:kubernetes/core_v1.dart' as api_core_v1;
 
 import '../api/dsl.dart';
 import '../api/provider.dart';
@@ -28,6 +27,7 @@ class KubernetesProvider implements TieProvider {
   KubernetesClient? _kubernetesClient;
   KubernetesClient? kubernetesClient;
   IOClient? _ioClient;
+  final Set<String> _namesapces = {};
 
   @protected String? get kubeConfigFilename => _kubeConfigFilename;
   @protected set kubeConfigFilename(newValue) {
@@ -38,7 +38,6 @@ class KubernetesProvider implements TieProvider {
   KubernetesProvider(this._config) {
     _kubeConfigFilename = "${_config.scratchDir}/${Uuid().v4()}";
   }
-
 
   @override
   Future<void> expandEnvironment(Environment environment) async {
@@ -179,6 +178,14 @@ class KubernetesProvider implements TieProvider {
           accessToken: '',
           httpClient: _ioClient);
     }
+
+    // get list of namespaces
+    if (_config.createNamespaces) {
+      var namespaces = await _kubernetesClient!.listCoreV1Namespace();
+      for (var namespace in namespaces.items) {
+        _namesapces.add(namespace.metadata!.name!);
+      }
+    }
   }
 
   @override
@@ -187,7 +194,6 @@ class KubernetesProvider implements TieProvider {
         File(_kubeConfigFilename!).existsSync()) {
       File(_kubeConfigFilename!).deleteSync();
     }
-
     if (_ioClient != null) {
       _ioClient!.close();
     }
@@ -201,6 +207,27 @@ class KubernetesProvider implements TieProvider {
   @override
   String getDestinationImageName(Environment environment, Image image) {
     return image.name!;
+  }
+
+  String verifyNamespace(TieContext tieContext,{String? namespace}) {
+    var verifyNamespace = namespace; // maybe we've been passed one
+    verifyNamespace ??= tieContext.app.namespace;
+    verifyNamespace ??= tieContext.environment.namespace;
+    verifyNamespace ??= 'default';
+    // create namespace if necessary
+    if (_config.createNamespaces && !_namesapces.contains(verifyNamespace) && verifyNamespace != 'default') {
+      var namespaceJson = {
+        "apiVersion": "v1",
+        "kind": "Namespace",
+        "metadata": {
+          "name": verifyNamespace,
+        }
+      };
+      Log.info('creating namespace $verifyNamespace');
+      var v1namespace = api_core_v1.Namespace.fromJson(namespaceJson);
+      _kubernetesClient!.createCoreV1Namespace(body: v1namespace);
+    }
+    return verifyNamespace;
   }
 
   @override
@@ -377,10 +404,7 @@ class KubernetesProvider implements TieProvider {
           };
 
           var kubectl = KubeCtlCommand(_config, _kubeConfigFilename!);
-
-          var namespace = tieContext.app.namespace;
-          namespace ??= tieContext.environment.namespace;
-          namespace ??= 'default';
+          var namespace = verifyNamespace(tieContext);
 
           // apply the template and save the cksum hash
           cksum.write(await kubectl.applyTemplateByValue(mountFile.file!,
@@ -419,6 +443,8 @@ class KubernetesProvider implements TieProvider {
 
           Log.info('applying helm chart: $chartLog');
           var helmCommand = HelmCommand(_config, _kubeConfigFilename!);
+          // verify the namespace
+          verifyNamespace(tieContext,namespace: chart.namespace);
           if (chart.url != null && !chart.url!.startsWith("oci://")) {
             await helmCommand.addRepo(tieContext, chart);
             await helmCommand.update(tieContext);
@@ -449,9 +475,7 @@ class KubernetesProvider implements TieProvider {
     if (tieContext.app.templateFiles != null) {
       for (var templateFile in tieContext.app.templateFiles!) {
         var kubectl = KubeCtlCommand(_config, _kubeConfigFilename!);
-        var namespace = tieContext.app.namespace;
-        namespace ??= tieContext.environment.namespace;
-        namespace ??= 'default';
+        var namespace = verifyNamespace(tieContext);
 
         // pre expand the file to check the deployment status
         var expanded = expandFileByNameWithProperties(

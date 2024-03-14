@@ -149,6 +149,7 @@ void showHeader(Config config) {
     print('[TIECD] trace-artifacts:\t${config.traceArtifacts}');
     print('[TIECD] trace-commands:\t\t${config.traceCommands}');
     print('[TIECD] banner:\t\t\t${config.banner}');
+    print('[TIECD] create-namespaces:\t\t\t${config.createNamespaces}');
     print('[TIECD] ---');
   }
 }
@@ -183,6 +184,8 @@ Future<Config> buildConfig(final ArgResults argResults) async {
       setupBoolValue(argResults['trace-commands'], 'TIECD_TRACE_COMMANDS');
   config.banner =
       setupBoolValue(argResults['banner'], 'TIECD_BANNER');
+  config.createNamespaces =
+      setupBoolValue(argResults['create-namespaces'], 'TIECD_CREATE_NAMESPACES');
 
   showHeader(config);
 
@@ -284,10 +287,15 @@ Future<void> main(List<String> arguments) async {
       help:
           'output generated and expanded artifacts [env: TIECD_TRACE_COMMANDS]');
   runner.argParser.addFlag('banner',
-      abbr: 'n',
+      abbr: 't',
       defaultsTo: true,
       help:
       'show TIECD banner header during execution [env: TIECD_BANNER]');
+  runner.argParser.addFlag('create-namespaces',
+      abbr: 'n',
+      defaultsTo: true,
+      help:
+      'auto create namespaces if necessary [env: TIECD_CREATE_NAMESPACES]');
 
 
   runner
