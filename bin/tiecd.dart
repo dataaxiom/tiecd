@@ -289,7 +289,6 @@ Future<void> main(List<String> arguments) async {
       help:
           'only execute the app names that are passed at runtime [env: TIECD_APP_NAMES_REQUIRED]');
   runner.argParser.addFlag('ignore-errors',
-      abbr: 'g',
       defaultsTo: false,
       help:
           'ignore errors keep processing other apps [env: TIECD_IGNORE_ERRORS]');
@@ -316,7 +315,6 @@ Future<void> main(List<String> arguments) async {
       help:
       'show TIECD banner header during execution [env: TIECD_BANNER]');
   runner.argParser.addFlag('create-namespaces',
-      abbr: 'n',
       defaultsTo: true,
       help:
       'auto create namespaces if necessary [env: TIECD_CREATE_NAMESPACES]');
