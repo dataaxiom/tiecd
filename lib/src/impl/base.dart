@@ -2,6 +2,7 @@ import 'dart:core';
 import 'dart:io';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart';
+import 'package:tiecd/src/extensions.dart';
 import 'package:yaml/yaml.dart';
 import 'package:checked_yaml/checked_yaml.dart';
 
@@ -393,6 +394,63 @@ abstract class BaseExecutor {
     }
   }
 
+  // Inject default repos - gitlab/github currently supported
+  void expandImageRepos(Tie tieFile) {
+    Map<String, ImageRepository> reposByUrl = {};
+    Map<String, ImageRepository> reposByName = {};
+
+    if (tieFile.repositories != null && tieFile.repositories!.image != null) {
+      for (ImageRepository repo in tieFile.repositories!.image!) {
+        if (repo.url.isNotNullNorEmpty) {
+          reposByUrl[repo.url!] = repo;
+        }
+        if (repo.name.isNotNullNorEmpty) {
+          reposByName[repo.name!] = repo;
+        }
+      }
+    }
+
+    // add gitlab
+    String? gitlabRepo = Platform.environment["CI_REGISTRY_IMAGE"];
+    if (gitlabRepo.isNotNullNorEmpty) {
+      if (!reposByUrl.containsKey(gitlabRepo)) {
+        var gitlab =  ImageRepository();
+        if (!reposByName.containsKey("gitlab")) {
+          gitlab.name = "gitlab";
+          gitlab.url = gitlabRepo;
+          gitlab.username = Platform.environment["CI_REGISTRY_USER"];
+          gitlab.password = Platform.environment["CI_JOB_TOKEN"];
+          // add it
+          tieFile.repositories ??= Repositories();
+          tieFile.repositories!.image ??= [];
+          tieFile.repositories!.image!.add(gitlab);
+        }
+      }
+    }
+
+    // add github
+    String? githubRepository = Platform.environment["GITHUB_REPOSITORY"];
+    String? githubActor = Platform.environment["GITHUB_ACTOR"];
+    String? githubToken = Platform.environment["GITHUB_TOKEN"];
+    if (githubRepository.isNotNullNorEmpty && githubActor.isNotNullNorEmpty && githubToken.isNotNullNorEmpty) {
+      String githubImage = 'ghcr.io/$githubRepository';
+      if (!reposByUrl.containsKey(githubImage)) {
+        var gitlab =  ImageRepository();
+        if (!reposByName.containsKey("github")) {
+          gitlab.name = "github";
+          gitlab.url = githubImage;
+          gitlab.username = githubActor;
+          gitlab.password = githubToken;
+          // add it
+          tieFile.repositories ??= Repositories();
+          tieFile.repositories!.image ??= [];
+          tieFile.repositories!.image!.add(gitlab);
+        }
+      }
+    }
+  }
+
+
   run() async {
     if (init()) {
       var hasError = false;
@@ -402,6 +460,8 @@ abstract class BaseExecutor {
         Set<String> includedFiles = {};
         Tie tieFile = Tie();
         mergeFile(tieFile, file, includedFiles);
+
+        expandImageRepos(tieFile);
 
         if (tieFile.apps != null) {
           for (var app in tieFile.apps!) {
