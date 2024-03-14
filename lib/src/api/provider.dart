@@ -22,25 +22,28 @@ class TieContext {
     Map<String, String> envVars = Platform.environment;
     envVars.forEach((key, value) => properties[key] = value);
 
-    if (app.envPropertyFiles != null && app.envPropertyFiles!.isNotEmpty) {
-      for (var envFile in app.envPropertyFiles!) {
-        readProperties(config, envFile, properties);
+    if (app.deploy != null) {
+      if (app.deploy!.envPropertyFiles != null &&
+          app.deploy!.envPropertyFiles!.isNotEmpty) {
+        for (var envFile in app.deploy!.envPropertyFiles!) {
+          readProperties(config, envFile, properties);
+        }
       }
-    }
-    if (app.env != null && app.env!.isNotEmpty) {
-      app.env!.forEach((key, value) => properties[key] = value);
+      if (app.deploy!.env != null && app.deploy!.env!.isNotEmpty) {
+        app.deploy!.env!.forEach((key, value) => properties[key] = value);
+      }
     }
 
     // deploy env takes highest order
-    if (app.deployEnvPropertyFiles != null &&
-        app.deployEnvPropertyFiles!.isNotEmpty) {
-      for (var deployFile in app.deployEnvPropertyFiles!) {
+    if (app.tiecdEnvPropertyFiles != null &&
+        app.tiecdEnvPropertyFiles!.isNotEmpty) {
+      for (var deployFile in app.tiecdEnvPropertyFiles!) {
         readProperties(config, deployFile, properties);
       }
     }
 
-    if (app.deployEnv != null && app.deployEnv!.isNotEmpty) {
-      app.deployEnv!.forEach((key, value) => properties[key] = value);
+    if (app.tiecdEnv != null && app.tiecdEnv!.isNotEmpty) {
+      app.tiecdEnv!.forEach((key, value) => properties[key] = value);
     }
 
     //properties.forEach((k,v) => print('${k}: ${v}'));

@@ -163,16 +163,6 @@ class Coordinate {
 enum DeploymentMode { single, multi }
 
 @JsonSerializable()
-class Facet {
-  String? name;
-  Map<String, String>? env;
-
-  Facet();
-  factory Facet.fromJson(Map json) => _$FacetFromJson(json);
-  Map<String, dynamic> toJson() => _$FacetToJson(this);
-}
-
-@JsonSerializable()
 class MountFile {
   String? file;
   String? mount;
@@ -180,60 +170,6 @@ class MountFile {
   MountFile();
   factory MountFile.fromJson(Map json) => _$MountFileFromJson(json);
   Map<String, dynamic> toJson() => _$MountFileToJson(this);
-}
-
-@JsonSerializable()
-class HttpGet {
-  String? host;
-  String? scheme;
-  String? path;
-  String? httpHeaders;
-  String? port;
-
-  HttpGet();
-  factory HttpGet.fromJson(Map json) => _$HttpGetFromJson(json);
-  Map<String, dynamic> toJson() => _$HttpGetToJson(this);
-}
-
-@JsonSerializable()
-class Probe {
-  String? initialDelay;
-  String? period;
-  String? timeout;
-  String? successThreshold;
-  String? failureThreshold;
-  HttpGet? httpGet;
-
-  Probe();
-  factory Probe.fromJson(Map json) => _$ProbeFromJson(json);
-  Map<String, dynamic> toJson() => _$ProbeToJson(this);
-}
-
-enum TerminationType {  edge, passthrough, reencrypt }
-
-@JsonSerializable()
-class Route {
-  String? name;
-  String? host;
-  TerminationType? termination;
-  String? key;
-  String? certificate;
-  String? caCertificate;
-  String? path;
-
-  Route();
-  factory Route.fromJson(Map json) => _$RouteFromJson(json);
-  Map<String, dynamic> toJson() => _$RouteToJson(this);
-}
-
-@JsonSerializable()
-class Resources {
-  String? cpu;
-  String? memory;
-
-  Resources();
-  factory Resources.fromJson(Map json) => _$ResourcesFromJson(json);
-  Map<String, dynamic> toJson() => _$ResourcesToJson(this);
 }
 
 @JsonSerializable()
@@ -269,47 +205,27 @@ class Command {
 }
 
 @JsonSerializable()
-class Spec {
-  String? name;
-  String? replicas;
-  Probe? startupProbe;
-  Probe? readinessProbe;
-  Probe? livenessProbe;
-  //protected Service service;
-  List<Route>? routes;
-  Resources? limits;
-  Resources? requests;
-  List<Secret>? secrets;
+class Build {
+  List<Coordinate>? artifacts;
 
-  Spec();
-  factory Spec.fromJson(Map json) => _$SpecFromJson(json);
-  Map<String, dynamic> toJson() => _$SpecToJson(this);
+  Build();
+  factory Build.fromJson(Map json) => _$BuildFromJson(json);
+  Map<String, dynamic> toJson() => _$BuildToJson(this);
 }
 
 @JsonSerializable()
-class App {
-  String? name;
-  String? label;
-  bool? autoRun;
+class Deploy {
   Action? action;
-  List<String>? includes;
-  String? dependsOn;
-  String? namespace;
-  List<Image>? images;
-  List<Coordinate>? artifacts;
-
   DeploymentMode? deploymentMode;
-  List<Facet>? facets;
   List<MountFile>? mountFiles;
   List<String>? templateFiles;
   // environment variables available during deployment time
-  Map<String, String>? deployEnv;
-  List<String>? deployEnvPropertyFiles;
-  // environment variables applied during deployment time and runtime (if applicable)
-  Map<String,String>? env;
+  Map<String, String>? env;
   List<String>? envPropertyFiles;
+
   List<String>? volumes;
-  List<HelmChart>? helmCharts;
+  List<Secret>? secrets;
+  HelmChart? helmChart;
   // apps to run after
   List<String>? postApps;
   List<String>? errorApps;
@@ -319,7 +235,30 @@ class App {
   List<Command>? preDeployCommands;
   List<Command>? postCommands;
   List<Command>? errorCommands;
+
+  String? namespace;
+
+
+  Deploy();
+  factory Deploy.fromJson(Map json) => _$DeployFromJson(json);
+  Map<String, dynamic> toJson() => _$DeployToJson(this);
+}
+
+@JsonSerializable()
+class App {
+  String? name;
+  String? label;
+  bool? autoRun;
+  List<String>? includes;
+  String? dependsOn;
+  List<Image>? images;
+  // environment variables applied during tiecd runtime execution
+  Map<String,String>? tiecdEnv;
+  List<String>? tiecdEnvPropertyFiles;
   String? comment;
+
+  Build? build;
+  Deploy? deploy;
 
   App();
   factory App.fromJson(Map json) => _$AppFromJson(json);

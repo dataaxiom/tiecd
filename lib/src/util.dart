@@ -3,6 +3,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'api/provider.dart';
+
 String varExpandByLine(String value, String fileExtension) {
   return varExpandByLineWithProperties(value, fileExtension, null);
 }
@@ -92,6 +94,13 @@ String varExpandByLineWithProperties(String value, String fileExtension, Map<Str
   });
 
   return newString;
+}
+
+String findNamespace(TieContext tieContext) {
+  var namespace = tieContext.app.deploy!.namespace;
+  namespace ??= tieContext.environment.namespace;
+  namespace ??= 'default';
+  return namespace;
 }
 
 String expandFileByContents(String value, String fileExtension) {

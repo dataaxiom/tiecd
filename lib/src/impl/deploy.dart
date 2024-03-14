@@ -10,9 +10,10 @@ import '../api/provider.dart';
 import '../api/types.dart';
 import '../log.dart';
 import '../providers/kubernetes_provider.dart';
+import '../util.dart';
 
-class Deploy extends BaseExecutor {
-  Deploy(super._config);
+class DeployExecutor extends BaseExecutor {
+  DeployExecutor(super._config);
 
   void preExpandEnvironment(Environment environment) {
     // if we haven't and apiType and we have apiConfig set check if it's kubernetes
@@ -60,10 +61,13 @@ class Deploy extends BaseExecutor {
   }
 
 
+
   @override
   execute(Tie tieFile, App app) async {
 
     if (tieFile.environments != null && tieFile.environments!.isNotEmpty) {
+
+      app.deploy ??= Deploy();
 
       List<Environment> environments = processEnvironments(tieFile.environments!);
 
@@ -94,47 +98,46 @@ class Deploy extends BaseExecutor {
           imageRepositories = tieFile.repositories!.image!;
         }
         var context = TieContext(config, imageRepositories, environment, app);
-        var namespace = app.namespace;
-        namespace ??= environment.namespace;
-        app.deployEnv ??= {};
+        var namespace = findNamespace(context);
+        app.tiecdEnv ??= {};
 
         if (namespace != null) {
-          app.deployEnv!["TIECD_NAMESPACE"] = namespace;
+          app.tiecdEnv!["TIECD_NAMESPACE"] = namespace;
         }
         if (environment.label != null) {
-          app.deployEnv!["TIECD_ENVIRONMENT_LABEL"] = environment.label!;
+          app.tiecdEnv!["TIECD_ENVIRONMENT_LABEL"] = environment.label!;
         }
 
         // only set if not already in environment
         if (Platform.environment['TIECD_DATE'] == null) {
           final DateFormat formatter = DateFormat('yyyy-MM-dd-HH-mm-ss');
           final String formatted = formatter.format(date);
-          app.deployEnv!["TIECD_DATE"] = formatted;
+          app.tiecdEnv!["TIECD_DATE"] = formatted;
         }
 
         try {
           await provider.login(context);
 
-          var action = app.action;
+          var action = app.deploy!.action;
           action ??= Action.install;
 
           if (action == Action.install) {
             await provider.processImage(context);
-            if (app.preCommands != null) {
-              await provider.runLocalCommands(context, app.preCommands!);
+            if (app.deploy!.preCommands != null) {
+              await provider.runLocalCommands(context, app.deploy!.preCommands!);
             }
             await provider.processConfig(context);
             await provider.processSecrets(context);
-            if (app.preDeployCommands != null) {
-              await provider.runLocalCommands(context, app.preDeployCommands!);
+            if (app.deploy!.preDeployCommands != null) {
+              await provider.runLocalCommands(context, app.deploy!.preDeployCommands!);
             }
             var checksum = await provider.processDeploy(context);
             if (checksum != '') {
-              context.app.deployEnv!["TIECD_TEMPLATE_HASH"] = checksum;
+              context.app.tiecdEnv!["TIECD_TEMPLATE_HASH"] = checksum;
             }
             await provider.processHelm(context);
-            if (app.postCommands != null) {
-              await provider.runLocalCommands(context, app.postCommands!);
+            if (app.deploy!.postCommands != null) {
+              await provider.runLocalCommands(context, app.deploy!.postCommands!);
             }
 
           } else if (action == Action.uninstall) {

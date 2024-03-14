@@ -136,21 +136,21 @@ void showHeader(Config config) {
     print(' ');
   }
   if (config.verbose) {
-    print('[TIECD] --- Runtime Configuration ---');
-    print('[TIECD] files:\t\t\t${config.files}');
-    print('[TIECD] files-commit-prefix:\t${config.filesCommitPrefix}');
-    print('[TIECD] apps:\t\t\t${config.apps}');
-    print('[TIECD] apps-commit-prefix:\t${config.appsCommitPrefix}');
-    print('[TIECD] base-dir: \t\t${config.baseDir}');
-    print('[TIECD] file-prefix:\t\t${config.filePrefix}');
-    print('[TIECD] app-names-required:\t${config.appNamesRequired}');
-    print('[TIECD] ignore-errors:\t\t${config.ignoreErrors}');
-    print('[TIECD] verbose:\t\t${config.verbose}');
-    print('[TIECD] trace-artifacts:\t${config.traceArtifacts}');
-    print('[TIECD] trace-commands:\t\t${config.traceCommands}');
-    print('[TIECD] banner:\t\t\t${config.banner}');
-    print('[TIECD] create-namespaces:\t\t\t${config.createNamespaces}');
-    print('[TIECD] ---');
+    Log.info(' --- Runtime Configuration ---');
+    Log.info(' files:\t\t\t${config.files}');
+    Log.info(' files-commit-prefix:\t${config.filesCommitPrefix}');
+    Log.info(' apps:\t\t\t${config.apps}');
+    Log.info(' apps-commit-prefix:\t${config.appsCommitPrefix}');
+    Log.info(' base-dir: \t\t${config.baseDir}');
+    Log.info(' file-prefix:\t\t${config.filePrefix}');
+    Log.info(' app-names-required:\t${config.appNamesRequired}');
+    Log.info(' ignore-errors:\t\t${config.ignoreErrors}');
+    Log.info(' verbose:\t\t${config.verbose}');
+    Log.info(' trace-artifacts:\t${config.traceArtifacts}');
+    Log.info(' trace-commands:\t\t${config.traceCommands}');
+    Log.info(' banner:\t\t\t${config.banner}');
+    Log.info(' create-namespaces:\t\t\t${config.createNamespaces}');
+    Log.info(' ---');
   }
 }
 
@@ -213,7 +213,7 @@ class DeployCommand extends Command {
   Future<void> run() async {
     var config = await buildConfig(globalResults!);
     try {
-      Deploy deploy = Deploy(config);
+      DeployExecutor deploy = DeployExecutor(config);
       await deploy.run();
     } on TieError catch (error) {
       Log.error(error.cause);

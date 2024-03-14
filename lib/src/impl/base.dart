@@ -252,133 +252,133 @@ abstract class BaseExecutor {
           }
           // autoRun doesn't inherit
 
-          if (app.action == null && includeApp.action != null) {
-            app.action = includeApp.action;
+          if (includeApp.tiecdEnv != null) {
+            app.tiecdEnv ??= {};
+            includeApp.tiecdEnv!.forEach(
+                    (key, value) =>
+                    app.tiecdEnv!.putIfAbsent(key, () => value));
           }
 
-          //  String? dependsOn;
-          if (app.namespace == null && includeApp.namespace != null) {
-            app.namespace;
-          }
-
-          if (includeApp.images != null) {
-            app.images ??= [];
-            for (var image in includeApp.images!) {
-              app.images!.add(image);
+          if (includeApp.tiecdEnvPropertyFiles != null) {
+            app.tiecdEnvPropertyFiles ??= [];
+            for (var propertyFile in includeApp.tiecdEnvPropertyFiles!) {
+              app.tiecdEnvPropertyFiles!.add(propertyFile);
             }
           }
 
-          if (includeApp.artifacts != null) {
-            app.artifacts ??= [];
-            for (var artifact in includeApp.artifacts!) {
-              app.artifacts!.add(artifact);
+          if (includeApp.deploy != null) {
+
+            app.deploy ??= Deploy();
+
+            if (app.deploy!.action == null && includeApp.deploy!.action != null) {
+              app.deploy!.action = includeApp.deploy!.action;
+            }
+
+            //  String? dependsOn;
+            if (app.deploy!.namespace == null && includeApp.deploy!.namespace != null) {
+              app.deploy!.namespace = includeApp.deploy!.namespace;
+            }
+
+            if (includeApp.images != null) {
+              app.images ??= [];
+              for (var image in includeApp.images!) {
+                app.images!.add(image);
+              }
+            }
+
+            if (app.deploy!.deploymentMode == null &&
+                includeApp.deploy!.deploymentMode != null) {
+              app.deploy!.deploymentMode = includeApp.deploy!.deploymentMode!;
+            }
+
+            if (includeApp.deploy!.mountFiles != null) {
+              app.deploy!.mountFiles ??= [];
+              for (var mountFile in includeApp.deploy!.mountFiles!) {
+                app.deploy!.mountFiles!.add(mountFile);
+              }
+            }
+
+            if (includeApp.deploy!.templateFiles != null) {
+              app.deploy!.templateFiles ??= [];
+              for (var templateFile in includeApp.deploy!.templateFiles!) {
+                app.deploy!.templateFiles!.add(templateFile);
+              }
+            }
+
+            if (includeApp.deploy!.env != null) {
+              app.deploy!.env ??= {};
+              includeApp.deploy!.env!.forEach(
+                      (key, value) => app.deploy!.env!.putIfAbsent(key, () => value));
+            }
+
+            if (includeApp.deploy!.envPropertyFiles != null) {
+              app.deploy!.envPropertyFiles ??= [];
+              for (var propertyFile in includeApp.deploy!.envPropertyFiles!) {
+                app.deploy!.envPropertyFiles!.add(propertyFile);
+              }
+            }
+
+            if (includeApp.deploy!.volumes != null) {
+              app.deploy!.volumes ??= [];
+              for (var volume in includeApp.deploy!.volumes!) {
+                app.deploy!.volumes!.add(volume);
+              }
+            }
+
+            if (app.deploy!.helmChart == null) {
+              app.deploy!.helmChart = includeApp.deploy!.helmChart;
+            }
+
+            if (includeApp.deploy!.postApps != null) {
+              app.deploy!.postApps ??= [];
+              for (var postApp in includeApp.deploy!.postApps!) {
+                app.deploy!.postApps!.add(postApp);
+              }
+            }
+
+            if (includeApp.deploy!.errorApps != null) {
+              app.deploy!.errorApps ??= [];
+              for (var errorApp in includeApp.deploy!.errorApps!) {
+                app.deploy!.errorApps!.add(errorApp);
+              }
+            }
+
+            if (includeApp.deploy!.preCommands != null) {
+              app.deploy!.preCommands ??= [];
+              for (var command in includeApp.deploy!.preCommands!) {
+                app.deploy!.preCommands!.add(command);
+              }
+            }
+
+            if (includeApp.deploy!.preDeployCommands != null) {
+              app.deploy!.preDeployCommands ??= [];
+              for (var command in includeApp.deploy!.preDeployCommands!) {
+                app.deploy!.preDeployCommands!.add(command);
+              }
+            }
+
+            if (includeApp.deploy!.postCommands != null) {
+              app.deploy!.postCommands ??= [];
+              for (var command in includeApp.deploy!.postCommands!) {
+                app.deploy!.postCommands!.add(command);
+              }
+            }
+
+            if (includeApp.deploy!.errorCommands != null) {
+              app.deploy!.errorCommands ??= [];
+              for (var command in includeApp.deploy!.errorCommands!) {
+                app.deploy!.errorCommands!.add(command);
+              }
             }
           }
 
-          if (app.deploymentMode == null && includeApp.deploymentMode != null) {
-            app.deploymentMode = includeApp.deploymentMode!;
-          }
-
-          if (includeApp.facets != null) {
-            app.facets ??= [];
-            for (var facet in includeApp.facets!) {
-              app.facets!.add(facet);
-            }
-          }
-
-          if (includeApp.mountFiles != null) {
-            app.mountFiles ??= [];
-            for (var mountFile in includeApp.mountFiles!) {
-              app.mountFiles!.add(mountFile);
-            }
-          }
-
-          if (includeApp.templateFiles != null) {
-            app.templateFiles ??= [];
-            for (var templateFile in includeApp.templateFiles!) {
-              app.templateFiles!.add(templateFile);
-            }
-          }
-
-          if (includeApp.deployEnv != null) {
-            app.deployEnv ??= {};
-            includeApp.deployEnv!.forEach(
-                (key, value) => app.deployEnv!.putIfAbsent(key, () => value));
-          }
-
-          if (includeApp.deployEnvPropertyFiles != null) {
-            app.deployEnvPropertyFiles ??= [];
-            for (var propertyFile in includeApp.deployEnvPropertyFiles!) {
-              app.deployEnvPropertyFiles!.add(propertyFile);
-            }
-          }
-
-          if (includeApp.env != null) {
-            app.env ??= {};
-            includeApp.env!.forEach(
-                (key, value) => app.env!.putIfAbsent(key, () => value));
-          }
-
-          if (includeApp.envPropertyFiles != null) {
-            app.envPropertyFiles ??= [];
-            for (var propertyFile in includeApp.envPropertyFiles!) {
-              app.envPropertyFiles!.add(propertyFile);
-            }
-          }
-
-          if (includeApp.volumes != null) {
-            app.volumes ??= [];
-            for (var volume in includeApp.volumes!) {
-              app.volumes!.add(volume);
-            }
-          }
-
-          if (includeApp.helmCharts != null) {
-            app.helmCharts ??= [];
-            for (var chart in includeApp.helmCharts!) {
-              app.helmCharts!.add(chart);
-            }
-          }
-
-          if (includeApp.postApps != null) {
-            app.postApps ??= [];
-            for (var postApp in includeApp.postApps!) {
-              app.postApps!.add(postApp);
-            }
-          }
-
-          if (includeApp.errorApps != null) {
-            app.errorApps ??= [];
-            for (var errorApp in includeApp.errorApps!) {
-              app.errorApps!.add(errorApp);
-            }
-          }
-
-          if (includeApp.preCommands != null) {
-            app.preCommands ??= [];
-            for (var command in includeApp.preCommands!) {
-              app.preCommands!.add(command);
-            }
-          }
-
-          if (includeApp.preDeployCommands != null) {
-            app.preDeployCommands ??= [];
-            for (var command in includeApp.preDeployCommands!) {
-              app.preDeployCommands!.add(command);
-            }
-          }
-
-          if (includeApp.postCommands != null) {
-            app.postCommands ??= [];
-            for (var command in includeApp.postCommands!) {
-              app.postCommands!.add(command);
-            }
-          }
-
-          if (includeApp.errorCommands != null) {
-            app.errorCommands ??= [];
-            for (var command in includeApp.errorCommands!) {
-              app.errorCommands!.add(command);
+          if (includeApp.build != null ) {
+            app.build ??= Build();
+            if (includeApp.build!.artifacts != null) {
+              app.build!.artifacts ??= [];
+              for (var artifact in includeApp.build!.artifacts!) {
+                app.build!.artifacts!.add(artifact);
+              }
             }
           }
 

@@ -20,20 +20,23 @@ import '../commands/skopeo.dart';
 import '../log.dart';
 import '../util.dart';
 
-
 class KubernetesProvider implements TieProvider {
   Config _config;
   String? _kubeConfigFilename;
   KubernetesClient? _kubernetesClient;
   KubernetesClient? kubernetesClient;
   IOClient? _ioClient;
-  final Set<String> _namesapces = {};
+  final Set<String> _namespaces = {};
 
-  @protected String? get kubeConfigFilename => _kubeConfigFilename;
-  @protected set kubeConfigFilename(newValue) {
+  @protected
+  String? get kubeConfigFilename => _kubeConfigFilename;
+  @protected
+  set kubeConfigFilename(newValue) {
     _kubeConfigFilename = newValue;
   }
-  @protected Config get config => _config;
+
+  @protected
+  Config get config => _config;
 
   KubernetesProvider(this._config) {
     _kubeConfigFilename = "${_config.scratchDir}/${Uuid().v4()}";
@@ -41,13 +44,14 @@ class KubernetesProvider implements TieProvider {
 
   @override
   Future<void> expandEnvironment(Environment environment) async {
-
     // if apiConfigFile is set load it
     if (environment.apiConfigFile != null) {
       if (!File(environment.apiConfigFile!).existsSync()) {
-        throw TieError("api config file: ${environment.apiConfigFile} does not exist");
+        throw TieError(
+            "api config file: ${environment.apiConfigFile} does not exist");
       } else {
-        environment.apiConfig ??= File(environment.apiConfigFile!).readAsStringSync();
+        environment.apiConfig ??=
+            File(environment.apiConfigFile!).readAsStringSync();
       }
     }
 
@@ -72,7 +76,7 @@ class KubernetesProvider implements TieProvider {
                 if (clusterName == cluster['name']) {
                   environment.apiUrl ??= cluster['cluster']['server'];
                   environment.apiClientCA ??=
-                  cluster['cluster']['certificate-authority-data'];
+                      cluster['cluster']['certificate-authority-data'];
                   break;
                 }
               }
@@ -82,7 +86,7 @@ class KubernetesProvider implements TieProvider {
                 if (userName == user['name']) {
                   environment.apiToken ??= user['user']['token'];
                   environment.apiClientCert ??=
-                  user['user']['client-certificate-data'];
+                      user['user']['client-certificate-data'];
                   environment.apiClientKey ??= user['user']['client-key-data'];
 
                   // check if the user credential is external
@@ -90,16 +94,19 @@ class KubernetesProvider implements TieProvider {
                     var command = user['user']['exec']['command'];
                     if (command != null) {
                       //  run the external credential provider
-                      var result = await Process.run(command, [], runInShell: true);
+                      var result =
+                          await Process.run(command, [], runInShell: true);
                       if (result.exitCode == 0) {
                         var response = result.stdout;
                         final authResult = jsonDecode(response);
                         var kind = authResult['kind'];
                         if (kind != null && kind == 'ExecCredential') {
                           if (authResult['status'] != null) {
-                            environment.apiToken = authResult['status']['token'];
+                            environment.apiToken =
+                                authResult['status']['token'];
                           } else {
-                            throw TieError("unknown credential status response: $response");
+                            throw TieError(
+                                "unknown credential status response: $response");
                           }
                         } else {
                           throw TieError("unknown credential type: $kind");
@@ -112,7 +119,6 @@ class KubernetesProvider implements TieProvider {
 
                   break;
                 }
-
               }
               break;
             }
@@ -124,7 +130,6 @@ class KubernetesProvider implements TieProvider {
 
   @override
   Future<void> login(TieContext tieContext) async {
-
     var environmentName = tieContext.environment.name;
     environmentName ??= '';
     if (tieContext.environment.apiUrl == null) {
@@ -156,7 +161,8 @@ class KubernetesProvider implements TieProvider {
           (X509Certificate cert, String host, int port) => true;
     }
     if (tieContext.environment.apiClientCA != null) {
-      context.setTrustedCertificatesBytes(base64.decode(tieContext.environment.apiClientCA!));
+      context.setTrustedCertificatesBytes(
+          base64.decode(tieContext.environment.apiClientCA!));
     }
     _ioClient = IOClient(httpClient);
 
@@ -167,7 +173,6 @@ class KubernetesProvider implements TieProvider {
           httpClient: _ioClient);
     } else if (tieContext.environment.apiClientCert != null &&
         tieContext.environment.apiClientKey != null) {
-
       context.useCertificateChainBytes(
           base64.decode(tieContext.environment.apiClientCert!));
       context.usePrivateKeyBytes(
@@ -183,7 +188,7 @@ class KubernetesProvider implements TieProvider {
     if (_config.createNamespaces) {
       var namespaces = await _kubernetesClient!.listCoreV1Namespace();
       for (var namespace in namespaces.items) {
-        _namesapces.add(namespace.metadata!.name!);
+        _namespaces.add(namespace.metadata!.name!);
       }
     }
   }
@@ -209,25 +214,25 @@ class KubernetesProvider implements TieProvider {
     return image.name!;
   }
 
-  String verifyNamespace(TieContext tieContext,{String? namespace}) {
-    var verifyNamespace = namespace; // maybe we've been passed one
-    verifyNamespace ??= tieContext.app.namespace;
-    verifyNamespace ??= tieContext.environment.namespace;
-    verifyNamespace ??= 'default';
+  String buildNamespace(TieContext tieContext, {String? namespace}) {
+    var buildName = namespace; // maybe we've been passed one
+    buildName ??= findNamespace(tieContext);
     // create namespace if necessary
-    if (_config.createNamespaces && !_namesapces.contains(verifyNamespace) && verifyNamespace != 'default') {
+    if (_config.createNamespaces &&
+        !_namespaces.contains(buildName) &&
+        buildName != 'default') {
       var namespaceJson = {
         "apiVersion": "v1",
         "kind": "Namespace",
         "metadata": {
-          "name": verifyNamespace,
+          "name": buildName,
         }
       };
-      Log.info('creating namespace $verifyNamespace');
+      Log.info('creating namespace $buildName');
       var v1namespace = api_core_v1.Namespace.fromJson(namespaceJson);
       _kubernetesClient!.createCoreV1Namespace(body: v1namespace);
     }
-    return verifyNamespace;
+    return buildName;
   }
 
   @override
@@ -319,9 +324,9 @@ class KubernetesProvider implements TieProvider {
 
               // get the sha for the image and setup deploy vars
               var sha = await skopeoCmd.imageSha(imageName);
-              tieContext.app.deployEnv!['TIECD_IMAGE_SHA'] = sha;
-              tieContext.app.deployEnv!['TIECD_IMAGE_NAME'] = destImageName;
-              tieContext.app.deployEnv!['TIECD_IMAGE_VERSION'] = version;
+              tieContext.app.tiecdEnv!['TIECD_IMAGE_SHA'] = sha;
+              tieContext.app.tiecdEnv!['TIECD_IMAGE_NAME'] = destImageName;
+              tieContext.app.tiecdEnv!['TIECD_IMAGE_VERSION'] = version;
               // now push the image
               await skopeoCmd.pushImage(imageName, fullDestImageName);
             } else {
@@ -366,9 +371,9 @@ class KubernetesProvider implements TieProvider {
 
   @override
   Future<void> processConfig(TieContext tieContext) async {
-    if (tieContext.app.mountFiles != null) {
+    if (tieContext.app.deploy!.mountFiles != null) {
       StringBuffer cksum = StringBuffer();
-      for (var mountFile in tieContext.app.mountFiles!) {
+      for (var mountFile in tieContext.app.deploy!.mountFiles!) {
         if (mountFile.file != null &&
             File("${_config.baseDir}/${mountFile.file}").existsSync()) {
           String mountPath = "";
@@ -404,7 +409,7 @@ class KubernetesProvider implements TieProvider {
           };
 
           var kubectl = KubeCtlCommand(_config, _kubeConfigFilename!);
-          var namespace = verifyNamespace(tieContext);
+          var namespace = buildNamespace(tieContext);
 
           // apply the template and save the cksum hash
           cksum.write(await kubectl.applyTemplateByValue(mountFile.file!,
@@ -420,7 +425,7 @@ class KubernetesProvider implements TieProvider {
       // calc total config checksum
       var bytes = utf8.encode(cksum.toString());
       var digest = md5.convert(bytes);
-      tieContext.app.deployEnv!['TIECD_CONFIG_HASH'] = digest.toString();
+      tieContext.app.tiecdEnv!['TIECD_CONFIG_HASH'] = digest.toString();
     }
   }
 
@@ -431,51 +436,49 @@ class KubernetesProvider implements TieProvider {
 
   @override
   Future<void> processHelm(TieContext tieContext) async {
-    if (tieContext.app.helmCharts != null) {
-      for (var chart in tieContext.app.helmCharts!) {
-        var chartLog = chart.url;
-        if (chartLog != null) {
-          if (!chartLog.startsWith("oci://") && chart.chart != null) {
-            chartLog += " ${chart.chart!}";
-          } else if (!chartLog.startsWith("oci://")) {
-            throw TieError('chart name can\'t be empty');
-          }
-
-          Log.info('applying helm chart: $chartLog');
-          var helmCommand = HelmCommand(_config, _kubeConfigFilename!);
-          // verify the namespace
-          verifyNamespace(tieContext,namespace: chart.namespace);
-          if (chart.url != null && !chart.url!.startsWith("oci://")) {
-            await helmCommand.addRepo(tieContext, chart);
-            await helmCommand.update(tieContext);
-          }
-          await helmCommand.install(tieContext, chart);
-          helmCommand.clean(tieContext, chart);
-        } else {
-          throw TieError('helm chart url is not set');
+    if (tieContext.app.deploy!.helmChart != null) {
+      var chart = tieContext.app.deploy!.helmChart!;
+      var chartLog = chart.url;
+      if (chartLog != null) {
+        if (!chartLog.startsWith("oci://") && chart.chart != null) {
+          chartLog += " ${chart.chart!}";
+        } else if (!chartLog.startsWith("oci://")) {
+          throw TieError('chart name can\'t be empty');
         }
+
+        Log.info('applying helm chart: $chartLog');
+        var helmCommand = HelmCommand(_config, _kubeConfigFilename!);
+        // verify the namespace
+        buildNamespace(tieContext, namespace: chart.namespace);
+        if (chart.url != null && !chart.url!.startsWith("oci://")) {
+          await helmCommand.addRepo(tieContext, chart);
+          await helmCommand.update(tieContext);
+        }
+        await helmCommand.install(tieContext, chart);
+        helmCommand.clean(tieContext, chart);
+      } else {
+        throw TieError('helm chart url is not set');
       }
     }
   }
 
   @override
   Future<void> removeHelm(TieContext tieContext) async {
-    if (tieContext.app.helmCharts != null) {
-      for (var chart in tieContext.app.helmCharts!) {
-        var helmCommand = HelmCommand(_config, _kubeConfigFilename!);
-        await helmCommand.remove(tieContext, chart);
-        helmCommand.clean(tieContext, chart);
-      }
+    if (tieContext.app.deploy!.helmChart != null) {
+      var chart = tieContext.app.deploy!.helmChart!;
+      var helmCommand = HelmCommand(_config, _kubeConfigFilename!);
+      await helmCommand.remove(tieContext, chart);
+      helmCommand.clean(tieContext, chart);
     }
   }
 
   @override
   Future<String> processDeploy(TieContext tieContext) async {
     var checkSum = '';
-    if (tieContext.app.templateFiles != null) {
-      for (var templateFile in tieContext.app.templateFiles!) {
+    if (tieContext.app.deploy!.templateFiles != null) {
+      for (var templateFile in tieContext.app.deploy!.templateFiles!) {
         var kubectl = KubeCtlCommand(_config, _kubeConfigFilename!);
-        var namespace = verifyNamespace(tieContext);
+        var namespace = buildNamespace(tieContext);
 
         // pre expand the file to check the deployment status
         var expanded = expandFileByNameWithProperties(
@@ -498,8 +501,8 @@ class KubernetesProvider implements TieProvider {
                 if (deployment.status != null &&
                     deployment.status!.observedGeneration != null) {
                   currentVersion = deployment.status!.observedGeneration!;
-                  print('Current revision for deployment/$name = $currentVersion');
-
+                  print(
+                      'Current revision for deployment/$name = $currentVersion');
                 }
               } catch (error) {
                 // need to find a better way - api doesn't support not found approach
@@ -517,7 +520,8 @@ class KubernetesProvider implements TieProvider {
                 if (deployment.status != null &&
                     deployment.status!.observedGeneration != null) {
                   currentVersion = deployment.status!.observedGeneration!;
-                  print('Current revision for statefulset/$name = $currentVersion');
+                  print(
+                      'Current revision for statefulset/$name = $currentVersion');
                 }
               } catch (error) {
                 // need to find a better way - api doesn't support not found approach
@@ -550,7 +554,7 @@ class KubernetesProvider implements TieProvider {
             var version = entry.value['version']!;
             var deployment = await _kubernetesClient!
                 .readAppsV1NamespacedDeployment(
-                name: deploymentName, namespace: namespace);
+                    name: deploymentName, namespace: namespace);
             if (deployment.status != null &&
                 deployment.status!.observedGeneration != null) {
               var currentVersion = deployment.status!.observedGeneration!;
@@ -566,7 +570,7 @@ class KubernetesProvider implements TieProvider {
             var version = entry.value['version']!;
             var statefulset = await _kubernetesClient!
                 .readAppsV1NamespacedStatefulSet(
-                name: statefulSetName, namespace: namespace);
+                    name: statefulSetName, namespace: namespace);
             if (statefulset.status != null &&
                 statefulset.status!.observedGeneration != null) {
               var currentVersion = statefulset.status!.observedGeneration!;

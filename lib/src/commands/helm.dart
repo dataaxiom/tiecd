@@ -80,19 +80,13 @@ class HelmCommand {
     } else {
       args.add('repo/${helmChart.chart}');
     }
-
     args.add('--install');
     args.add('--wait');
     args.add('--history-max=1');
-
-    var namespace = helmChart.namespace;
-    namespace ??= tieContext.app.namespace;
-    namespace ??= tieContext.environment.namespace;
-
+    var namespace = findNamespace(tieContext);
     if (namespace != null) {
       args.add("--namespace=$namespace");
     }
-
     if (helmChart.sets != null) {
       for (var setValue in helmChart.sets!) {
         args.add('--set');
@@ -174,19 +168,12 @@ class HelmCommand {
     if (name == null && tieContext.app.name != null) {
       name = tieContext.app.name!;
     }
-
     var args = ['uninstall', '--wait', name!];
-
-    var namespace = helmChart.namespace;
-    namespace ??= tieContext.app.namespace;
-    namespace ??= tieContext.environment.namespace;
-
+    var namespace = findNamespace(tieContext);
     if (namespace != null) {
       args.add('--namespace=$namespace');
     }
-
     Log.traceCommand(_config, 'helm', args);
-
     var kubeProperties = Map.of(tieContext.getEnv());
     kubeProperties["KUBECONFIG"] = _kubeConfigFile;
     kubeProperties['HELM_CACHE_HOME'] = "${_config.scratchDir}/${_tempDir!}/cache";
