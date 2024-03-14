@@ -132,11 +132,13 @@ class DeployExecutor extends BaseExecutor {
           app.tiecdEnv!["TIECD_DATE"] = formatted;
         }
 
-        var contents = app.toJson();
-        Map<String, dynamic> wrapper = {};
-        wrapper['app'] = contents;
-        sanitizeDoc(config, wrapper);
-        print(json2yaml(wrapper));
+        if (config.traceTieFile) {
+          var contents = app.toJson();
+          Map<String, dynamic> wrapper = {};
+          wrapper['app'] = contents;
+          sanitizeDoc(config, wrapper);
+          print(json2yaml(wrapper));
+        }
 
         try {
           await provider.login(context);
