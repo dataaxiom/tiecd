@@ -156,6 +156,9 @@ class KubernetesProvider implements TieProvider {
       httpClient.badCertificateCallback =
           (X509Certificate cert, String host, int port) => true;
     }
+    if (tieContext.environment.apiClientCA != null) {
+      context.setTrustedCertificatesBytes(base64.decode(tieContext.environment.apiClientCA!));
+    }
     _ioClient = IOClient(httpClient);
 
     if (tieContext.environment.apiToken != null) {
@@ -165,12 +168,7 @@ class KubernetesProvider implements TieProvider {
           httpClient: _ioClient);
     } else if (tieContext.environment.apiClientCert != null &&
         tieContext.environment.apiClientKey != null) {
-      if (tieContext.environment.apiClientCA != null) {
-        context.setTrustedCertificatesBytes(
-            base64.decode(tieContext.environment.apiClientCA!));
-      } else {
-        context = SecurityContext();
-      }
+
       context.useCertificateChainBytes(
           base64.decode(tieContext.environment.apiClientCert!));
       context.usePrivateKeyBytes(
