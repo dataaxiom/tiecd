@@ -400,12 +400,12 @@ abstract class BaseExecutor {
     if (message.isNotNullNorEmpty) {
       Log.info(message!);
     }
-    print('');
+    print('---');
     Map<String, dynamic> wrapper = {};
     wrapper[name] = contents;
     sanitizeDoc(config, wrapper);
     print(json2yaml(wrapper));
-    print('');
+    print('---');
   }
   // Inject default repos - gitlab/github currently supported
   void expandImageRepos(Tie tieFile) {
