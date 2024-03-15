@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:intl/intl.dart';
 import 'package:json2yaml/json2yaml.dart';
+import 'package:tiecd/src/extensions.dart';
 import 'package:tiecd/src/impl/base.dart';
 import 'package:tiecd/src/providers/gke_provider.dart';
 import 'package:yaml/yaml.dart';
@@ -61,16 +62,6 @@ class DeployExecutor extends BaseExecutor {
     return environments;
   }
 
-  void _outputEnvironment(Environment environment) {
-    Log.info("Environment in use:");
-    var contents = environment.toJson();
-    Map<String, dynamic> wrapper = {};
-    wrapper['environment'] = contents;
-    sanitizeDoc(config, wrapper);
-    print(json2yaml(wrapper));
-  }
-
-
   @override
   execute(Tie tieFile, App app) async {
     if (tieFile.environments != null && tieFile.environments!.isNotEmpty) {
@@ -87,7 +78,7 @@ class DeployExecutor extends BaseExecutor {
         preExpandEnvironment(environment);
         TieProvider provider;
         if (environment.apiType == null) {
-          _outputEnvironment(environment);
+          printObject('environment', 'Environment in use:', environment.toJson());
           throw TieError('provider type is not set');
         } else if (environment.apiType == "kubernetes") {
           if (environment.apiProvider == "gke") {
@@ -96,7 +87,7 @@ class DeployExecutor extends BaseExecutor {
             provider = KubernetesProvider(config);
           }
         } else {
-          _outputEnvironment(environment);
+          printObject('environment', 'Environment in use:', environment.toJson());
           throw TieError(
               'provider ${environment.apiType} type is not supported');
         }
@@ -104,7 +95,7 @@ class DeployExecutor extends BaseExecutor {
         provider.expandEnvironment(environment);
 
         if (config.traceTieFile) {
-          _outputEnvironment(environment);
+          printObject('environment', 'Environment in use:', environment.toJson());
         }
 
         Log.green(
@@ -133,11 +124,7 @@ class DeployExecutor extends BaseExecutor {
         }
 
         if (config.traceTieFile) {
-          var contents = app.toJson();
-          Map<String, dynamic> wrapper = {};
-          wrapper['app'] = contents;
-          sanitizeDoc(config, wrapper);
-          print(json2yaml(wrapper));
+          printObject('app', null, app.toJson());
         }
 
         try {
@@ -161,6 +148,10 @@ class DeployExecutor extends BaseExecutor {
             var checksum = await provider.processDeploy(context);
             if (checksum != '') {
               context.app.tiecdEnv!["TIECD_TEMPLATE_HASH"] = checksum;
+              if (config.verbose) {
+                Log.info(
+                    'adding TIECD_TEMPLATE_HASH to environment: $checksum');
+              }
             }
             await provider.processHelm(context);
             if (app.deploy!.postCommands != null) {
@@ -171,6 +162,9 @@ class DeployExecutor extends BaseExecutor {
             await provider.removeHelm(context);
           } else {
             throw TieError('unknown action type: $action on app "${app.name}"');
+          }
+          if (config.verbose) {
+            printObject('app', 'final computed app definition', app.toJson());
           }
         } catch (error) {
           rethrow;

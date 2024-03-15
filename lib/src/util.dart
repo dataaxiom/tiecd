@@ -185,7 +185,7 @@ void sanitizeString(Config config, String key, String value, Map<String, dynamic
       break;
     }
     if (key.toLowerCase().contains(label) &&
-        !(value.startsWith('\${') && value.endsWith('}'))) {
+        !(value.startsWith('\${') && value.endsWith('}')) && !key.startsWith('TIECD_')) {
       isSecret = true;
       break;
     }

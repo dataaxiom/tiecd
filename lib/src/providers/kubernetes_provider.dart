@@ -237,10 +237,7 @@ class KubernetesProvider implements TieProvider {
 
   @override
   Future<void> processImage(TieContext tieContext) async {
-    if (tieContext.app.images != null &&
-        tieContext.environment.repository != null &&
-        (tieContext.environment.repository!.mode == null ||
-            tieContext.environment.repository!.mode == ImageMode.push)) {
+    if (tieContext.app.images != null) {
       var skopeoCmd = SkopeoCommand(_config);
       var images = tieContext.app.images;
       if (images != null) {
@@ -288,29 +285,31 @@ class KubernetesProvider implements TieProvider {
               skopeoCmd.srcTlsVerify = imageRepository.tlsVerify!;
             }
 
-            var destImageRepo = tieContext.environment.repository;
-            if (destImageRepo != null) {
-              if (destImageRepo.url != null) {
-                skopeoCmd.destRepo = destImageRepo.url!;
+            if  (tieContext.environment.repository != null) {
+              var destImageRepo = tieContext.environment.repository;
+              if (destImageRepo != null) {
+                if (destImageRepo.url != null) {
+                  skopeoCmd.destRepo = destImageRepo.url!;
+                } else {
+                  throw TieError(
+                      'Destination image repo url is empty in environment');
+                }
+                if (destImageRepo.username != null) {
+                  skopeoCmd.destUsername = destImageRepo.username!;
+                }
+                if (destImageRepo.password != null) {
+                  skopeoCmd.destPassword = destImageRepo.password!;
+                }
+                if (destImageRepo.token != null) {
+                  skopeoCmd.destToken = destImageRepo.token!;
+                }
+                if (destImageRepo.tlsVerify != null) {
+                  skopeoCmd.destTlsVerify = destImageRepo.tlsVerify!;
+                }
               } else {
                 throw TieError(
-                    'Destination image repo url is empty in environment');
+                    'No destination image repository specified in target environment');
               }
-              if (destImageRepo.username != null) {
-                skopeoCmd.destUsername = destImageRepo.username!;
-              }
-              if (destImageRepo.password != null) {
-                skopeoCmd.destPassword = destImageRepo.password!;
-              }
-              if (destImageRepo.token != null) {
-                skopeoCmd.destToken = destImageRepo.token!;
-              }
-              if (destImageRepo.tlsVerify != null) {
-                skopeoCmd.destTlsVerify = destImageRepo.tlsVerify!;
-              }
-            } else {
-              throw TieError(
-                  'No destination image repository specified in target environment');
             }
 
             if (image.name != null) {
@@ -324,11 +323,37 @@ class KubernetesProvider implements TieProvider {
 
               // get the sha for the image and setup deploy vars
               var sha = await skopeoCmd.imageSha(imageName);
-              tieContext.app.tiecdEnv!['TIECD_IMAGE_SHA'] = sha;
-              tieContext.app.tiecdEnv!['TIECD_IMAGE_NAME'] = destImageName;
-              tieContext.app.tiecdEnv!['TIECD_IMAGE_VERSION'] = version;
-              // now push the image
-              await skopeoCmd.pushImage(imageName, fullDestImageName);
+
+              if (_config.verbose) {
+                if (images.length == 1) {
+                  tieContext.app.tiecdEnv!['TIECD_IMAGE_SHA'] = sha;
+                  Log.info('adding TIECD_IMAGE_SHA to environment: $sha');
+                  tieContext.app.tiecdEnv!['TIECD_IMAGE_NAME'] = destImageName;
+                  Log.info(
+                      'adding TIECD_IMAGE_NAME to environment: $destImageName');
+                  tieContext.app.tiecdEnv!['TIECD_IMAGE_VERSION'] = version;
+                  Log.info(
+                      'adding TIECD_IMAGE_VERSION to environment: $version');
+                }
+                var envImageName = image.name!.toUpperCase().replaceAll(
+                    '-', "_").replaceAll('/', '_');
+                tieContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_SHA'] =
+                    sha;
+                Log.info(
+                    'adding TIECD_IMAGE_${envImageName}_SHA to environment: $sha');
+                tieContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_NAME'] =
+                    destImageName;
+                Log.info(
+                    'adding TIECD_IMAGE_${envImageName}_NAME to environment: $destImageName');
+                tieContext.app
+                    .tiecdEnv!['TIECD_IMAGE_${envImageName}_VERSION'] = version;
+                Log.info(
+                    'adding TIECD_IMAGE_${envImageName}_VERSION to environment: $version');
+              }
+              // push the image if setup
+              if (tieContext.environment.repository != null && tieContext.environment.repository!.mode == ImageMode.push) {
+                await skopeoCmd.pushImage(imageName, fullDestImageName);
+              }
             } else {
               throw TieError('image name can not be null');
             }
@@ -426,6 +451,8 @@ class KubernetesProvider implements TieProvider {
       var bytes = utf8.encode(cksum.toString());
       var digest = md5.convert(bytes);
       tieContext.app.tiecdEnv!['TIECD_CONFIG_HASH'] = digest.toString();
+      Log.info('adding TIECD_CONFIG_HASH to environment: $digest');
+
     }
   }
 

@@ -396,6 +396,17 @@ abstract class BaseExecutor {
     }
   }
 
+  void printObject(String name, String? message, Map contents) {
+    if (message.isNotNullNorEmpty) {
+      Log.info(message!);
+    }
+    print('');
+    Map<String, dynamic> wrapper = {};
+    wrapper[name] = contents;
+    sanitizeDoc(config, wrapper);
+    print(json2yaml(wrapper));
+    print('');
+  }
   // Inject default repos - gitlab/github currently supported
   void expandImageRepos(Tie tieFile) {
     Map<String, ImageRepository> reposByUrl = {};
@@ -452,10 +463,7 @@ abstract class BaseExecutor {
     }
 
     if (tieFile.repositories != null && _config.traceTieFile) {
-      Log.info("Repositories in use:");
-      var contents = tieFile.repositories!.toJson();
-      sanitizeDoc(config,contents);
-      print(json2yaml(contents));
+      printObject('repository', 'Repositories in use:', tieFile.repositories!.toJson());
     }
   }
 
