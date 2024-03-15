@@ -29,7 +29,7 @@ while read tag; do
     if [ "$1" == "okd" ]; then
        docker tag $tag-$1 $tag-openshift
        echo "docker push $tag-openshift"
-       docker push $tag 
+       docker push $tag-openshift
     fi
   fi
 done <tags.txt
