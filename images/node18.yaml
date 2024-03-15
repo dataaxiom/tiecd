@@ -13,3 +13,5 @@ modules:
     - name: node.package.repo 
       version: "18"
     - name: node
+    - name: yarn
+    - name: pnpm
