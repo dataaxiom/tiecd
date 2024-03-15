@@ -1,0 +1,9 @@
+#!/bin/sh
+# Configure module
+set -e
+
+cd /tmp/artifacts
+unzip gradle.zip
+cd gradle-*
+mkdir -p /opt
+cp -r . /opt/gradle

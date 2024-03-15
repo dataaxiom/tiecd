@@ -24,6 +24,13 @@ while read tag; do
   else
     echo "docker push $tag-$1"
     docker push $tag-$1
+
+    # tag okd image openshift also
+    if [ "$1" == "okd" ]; then
+       docker tag $tag-$1 $tag-openshift
+       echo "docker push $tag-openshift
+       docker push $tag 
+    fi
   fi
 done <tags.txt
 
