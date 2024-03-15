@@ -1,0 +1,8 @@
+schema_version: 1
+version: 1.0.0
+name: node
+description: "Add the node.js package"
+packages:
+  manager: apt-get
+  install:
+    - nodejs
