@@ -38,7 +38,7 @@ jobs:
       fail-fast: false
       matrix:
         image: [
-          'full', 'k8s', 'okd', 'gke', 'eks', 'jdk8', 'jdk11', 'jdk17', 'jdk21', 'node18', 'node20', 'vercel'
+          'k8s', 'okd', 'gke', 'eks', 'aks', 'jdk8', 'jdk11', 'jdk17', 'jdk21', 'node18', 'node20', 'vercel'
         ]
     steps:
     - name: Check out repo

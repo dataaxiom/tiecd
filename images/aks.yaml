@@ -11,8 +11,8 @@ modules:
   install:
     - name: base
     - name: helm
-    - name: okd.client
     - name: google.package.repo
     - name: kubectl
-    - name: google.cloud.sdk
-    - name: awscli
+    - name: microsoft.package.repo
+    - name: azure-cli
+

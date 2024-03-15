@@ -8,29 +8,20 @@ cp LICENSE images/modules/base/build/.
 cp oss_licenses.json images/modules/base/build/.
 
 while read tag; do
-  if [ "$1" == "full" ]; then
-    tagargs+=( --tag="$tag" )
-  else
-    tagargs+=( --tag="$tag-$1" )
-  fi
+  tagargs+=( --tag="$tag-$1" )
 done <tags.txt
 
 cekit --descriptor images/$1.yaml build docker "${tagargs[@]}"
 
 while read tag; do
-  if [ "$1" == "full" ]; then
-    echo "docker push $tag"
-    docker push $tag
-  else
-    echo "docker push $tag-$1"
-    docker push $tag-$1
+  echo "docker push $tag-$1"
+  docker push $tag-$1
 
-    # tag okd image openshift also
-    if [ "$1" == "okd" ]; then
-       docker tag $tag-$1 $tag-openshift
-       echo "docker push $tag-openshift"
-       docker push $tag-openshift
-    fi
+  # tag okd image openshift also
+  if [ "$1" == "okd" ]; then
+     docker tag $tag-$1 $tag-openshift
+     echo "docker push $tag-openshift"
+     docker push $tag-openshift
   fi
 done <tags.txt
 

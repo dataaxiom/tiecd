@@ -15,6 +15,7 @@ packages:
     - skopeo
     - umoci
     - unzip
+    - lsb-release
 artifacts:
   - name: "tiecd"
     path: "build/tiecd"
