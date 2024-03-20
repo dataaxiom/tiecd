@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:core';
 import 'dart:io';
 import 'package:json2yaml/json2yaml.dart';
@@ -11,6 +10,8 @@ import 'package:checked_yaml/checked_yaml.dart';
 import '../api/dsl.dart';
 import '../api/types.dart';
 import '../log.dart';
+import '../project/factory.dart';
+import '../project/nextjs.dart';
 import '../util.dart';
 
 abstract class BaseExecutor {
@@ -26,6 +27,11 @@ abstract class BaseExecutor {
   Config get config => _config;
   @protected
   DateTime get date => _date;
+
+
+  String getVerb() {
+    return '';
+  }
 
   bool initTieDirectory(String path) {
     bool found = false;
@@ -118,6 +124,9 @@ abstract class BaseExecutor {
     if (_config.baseDir == '') {
       success = initTieDirectory('.');
       if (!success) {
+        success = initTieDirectory('tiecd');
+      }
+      if (!success) {
         success = initTieDirectory('src/main/deploy');
       }
     } else {
@@ -164,7 +173,7 @@ abstract class BaseExecutor {
         currentApps = currentApps.substring(0, currentApps.length - 1);
         Log.info(currentApps);
       } else {
-        Log.info("deploying all apps");
+        Log.info("${getVerb()} all apps");
       }
 
       // create scratch area
@@ -180,55 +189,55 @@ abstract class BaseExecutor {
     // recursively process includes
     if (File('${_config.baseDir}/$yamlFile').existsSync()) {
       var expandedFile = expandFileByName("${_config.baseDir}/$yamlFile");
-      if (expandedFile != '') {
-        final tieIncludeFile = checkedYamlDecode(
-          expandedFile,
-          (m) => Tie.fromJson(loadYaml(expandedFile)),
-        );
-        if (tieIncludeFile.includes != null) {
-          for (var include in tieIncludeFile.includes!) {
-            if (!includedFiles.contains(include)) {
-              includedFiles.add(include);
-              mergeFile(tieFile, include, includedFiles);
-            } else {
-              throw TieError(
-                  "duplicate include file detected, $include already has been included");
-            }
+      if (expandedFile.isNullOrEmpty) {
+        Log.info('${_config.baseDir}/$yamlFile is empty using defaults');
+        expandedFile = '{}';
+      }
+      final tieIncludeFile = checkedYamlDecode(
+        expandedFile,
+        (m) => Tie.fromJson(loadYaml(expandedFile)),
+      );
+      if (tieIncludeFile.includes != null) {
+        for (var include in tieIncludeFile.includes!) {
+          if (!includedFiles.contains(include)) {
+            includedFiles.add(include);
+            mergeFile(tieFile, include, includedFiles);
+          } else {
+            throw TieError(
+                "duplicate include file detected, $include already has been included");
           }
         }
+      }
 
-        if (tieIncludeFile.repositories != null) {
-          if (tieIncludeFile.repositories!.image != null) {
-            tieFile.repositories ??= Repositories();
-            tieFile.repositories!.image ??= [];
-            for (var imageRepo in tieIncludeFile.repositories!.image!) {
-              tieFile.repositories!.image!.add(imageRepo);
-            }
-          }
-          if (tieIncludeFile.repositories!.maven != null) {
-            tieFile.repositories ??= Repositories();
-            tieFile.repositories!.maven ??= [];
-            for (var mavenRepo in tieIncludeFile.repositories!.maven!) {
-              tieFile.repositories!.maven!.add(mavenRepo);
-            }
+      if (tieIncludeFile.repositories != null) {
+        if (tieIncludeFile.repositories!.image != null) {
+          tieFile.repositories ??= Repositories();
+          tieFile.repositories!.image ??= [];
+          for (var imageRepo in tieIncludeFile.repositories!.image!) {
+            tieFile.repositories!.image!.add(imageRepo);
           }
         }
+        if (tieIncludeFile.repositories!.maven != null) {
+          tieFile.repositories ??= Repositories();
+          tieFile.repositories!.maven ??= [];
+          for (var mavenRepo in tieIncludeFile.repositories!.maven!) {
+            tieFile.repositories!.maven!.add(mavenRepo);
+          }
+        }
+      }
 
-        if (tieIncludeFile.environments != null) {
-          tieFile.environments ??= [];
-          for (var environment in tieIncludeFile.environments!) {
-            tieFile.environments!.add(environment);
-          }
+      if (tieIncludeFile.environments != null) {
+        tieFile.environments ??= [];
+        for (var environment in tieIncludeFile.environments!) {
+          tieFile.environments!.add(environment);
         }
+      }
 
-        if (tieIncludeFile.apps != null) {
-          tieFile.apps ??= [];
-          for (var app in tieIncludeFile.apps!) {
-            tieFile.apps!.add(app);
-          }
+      if (tieIncludeFile.apps != null) {
+        tieFile.apps ??= [];
+        for (var app in tieIncludeFile.apps!) {
+          tieFile.apps!.add(app);
         }
-      } else {
-        throw TieError('file: $yamlFile is empty');
       }
     } else {
       throw TieError("file: $yamlFile doesn't exist");
@@ -257,8 +266,7 @@ abstract class BaseExecutor {
           if (includeApp.tiecdEnv != null) {
             app.tiecdEnv ??= {};
             includeApp.tiecdEnv!.forEach(
-                    (key, value) =>
-                    app.tiecdEnv!.putIfAbsent(key, () => value));
+                (key, value) => app.tiecdEnv!.putIfAbsent(key, () => value));
           }
 
           if (includeApp.tiecdEnvPropertyFiles != null) {
@@ -269,15 +277,16 @@ abstract class BaseExecutor {
           }
 
           if (includeApp.deploy != null) {
-
             app.deploy ??= Deploy();
 
-            if (app.deploy!.action == null && includeApp.deploy!.action != null) {
+            if (app.deploy!.action == null &&
+                includeApp.deploy!.action != null) {
               app.deploy!.action = includeApp.deploy!.action;
             }
 
             //  String? dependsOn;
-            if (app.deploy!.namespace == null && includeApp.deploy!.namespace != null) {
+            if (app.deploy!.namespace == null &&
+                includeApp.deploy!.namespace != null) {
               app.deploy!.namespace = includeApp.deploy!.namespace;
             }
 
@@ -300,17 +309,17 @@ abstract class BaseExecutor {
               }
             }
 
-            if (includeApp.deploy!.templateFiles != null) {
-              app.deploy!.templateFiles ??= [];
-              for (var templateFile in includeApp.deploy!.templateFiles!) {
-                app.deploy!.templateFiles!.add(templateFile);
+            if (includeApp.deploy!.manifests != null) {
+              app.deploy!.manifests ??= [];
+              for (var templateFile in includeApp.deploy!.manifests!) {
+                app.deploy!.manifests!.add(templateFile);
               }
             }
 
             if (includeApp.deploy!.env != null) {
               app.deploy!.env ??= {};
-              includeApp.deploy!.env!.forEach(
-                      (key, value) => app.deploy!.env!.putIfAbsent(key, () => value));
+              includeApp.deploy!.env!.forEach((key, value) =>
+                  app.deploy!.env!.putIfAbsent(key, () => value));
             }
 
             if (includeApp.deploy!.envPropertyFiles != null) {
@@ -345,42 +354,45 @@ abstract class BaseExecutor {
               }
             }
 
-            if (includeApp.deploy!.preCommands != null) {
-              app.deploy!.preCommands ??= [];
-              for (var command in includeApp.deploy!.preCommands!) {
-                app.deploy!.preCommands!.add(command);
+            if (includeApp.deploy!.beforeScripts != null) {
+              app.deploy!.beforeScripts ??= [];
+              for (var command in includeApp.deploy!.beforeScripts!) {
+                app.deploy!.beforeScripts!.add(command);
               }
             }
 
-            if (includeApp.deploy!.preDeployCommands != null) {
-              app.deploy!.preDeployCommands ??= [];
-              for (var command in includeApp.deploy!.preDeployCommands!) {
-                app.deploy!.preDeployCommands!.add(command);
+            if (includeApp.deploy!.scripts != null) {
+              app.deploy!.scripts ??= [];
+              for (var command in includeApp.deploy!.scripts!) {
+                app.deploy!.scripts!.add(command);
               }
             }
 
-            if (includeApp.deploy!.postCommands != null) {
-              app.deploy!.postCommands ??= [];
-              for (var command in includeApp.deploy!.postCommands!) {
-                app.deploy!.postCommands!.add(command);
+            if (includeApp.deploy!.afterScripts != null) {
+              app.deploy!.afterScripts ??= [];
+              for (var command in includeApp.deploy!.afterScripts!) {
+                app.deploy!.afterScripts!.add(command);
               }
             }
 
-            if (includeApp.deploy!.errorCommands != null) {
-              app.deploy!.errorCommands ??= [];
-              for (var command in includeApp.deploy!.errorCommands!) {
-                app.deploy!.errorCommands!.add(command);
+            if (includeApp.deploy!.errorScripts != null) {
+              app.deploy!.errorScripts ??= [];
+              for (var command in includeApp.deploy!.errorScripts!) {
+                app.deploy!.errorScripts!.add(command);
               }
             }
           }
 
-          if (includeApp.build != null ) {
+          if (includeApp.build != null) {
             app.build ??= Build();
             if (includeApp.build!.artifacts != null) {
               app.build!.artifacts ??= [];
               for (var artifact in includeApp.build!.artifacts!) {
                 app.build!.artifacts!.add(artifact);
               }
+            }
+            if (includeApp.build!.imageDefinition != null) {
+              //todo
             }
           }
 
@@ -407,6 +419,7 @@ abstract class BaseExecutor {
     print(json2yaml(wrapper));
     print('---');
   }
+
   // Inject default repos - gitlab/github currently supported
   void expandImageRepos(Tie tieFile) {
     Map<String, ImageRepository> reposByUrl = {};
@@ -427,7 +440,7 @@ abstract class BaseExecutor {
     String? gitlabRepo = Platform.environment["CI_REGISTRY"];
     if (gitlabRepo.isNotNullNorEmpty) {
       if (!reposByUrl.containsKey(gitlabRepo)) {
-        var gitlab =  ImageRepository();
+        var gitlab = ImageRepository();
         if (!reposByName.containsKey("gitlab")) {
           gitlab.name = "gitlab";
           gitlab.url = gitlabRepo;
@@ -445,10 +458,12 @@ abstract class BaseExecutor {
     String? githubRepository = Platform.environment["GITHUB_REPOSITORY"];
     String? githubActor = Platform.environment["GITHUB_ACTOR"];
     String? githubToken = Platform.environment["GITHUB_TOKEN"];
-    if (githubRepository.isNotNullNorEmpty && githubActor.isNotNullNorEmpty && githubToken.isNotNullNorEmpty) {
+    if (githubRepository.isNotNullNorEmpty &&
+        githubActor.isNotNullNorEmpty &&
+        githubToken.isNotNullNorEmpty) {
       String githubImage = 'ghcr.io/$githubRepository';
       if (!reposByUrl.containsKey(githubImage)) {
-        var gitlab =  ImageRepository();
+        var gitlab = ImageRepository();
         if (!reposByName.containsKey("github")) {
           gitlab.name = "github";
           gitlab.url = githubImage;
@@ -463,10 +478,10 @@ abstract class BaseExecutor {
     }
 
     if (tieFile.repositories != null && _config.traceTieFile) {
-      printObject('repository', 'Repositories in use:', tieFile.repositories!.toJson());
+      printObject(
+          'repository', 'Repositories in use:', tieFile.repositories!.toJson());
     }
   }
-
 
   run() async {
     if (init()) {
@@ -479,6 +494,20 @@ abstract class BaseExecutor {
         mergeFile(tieFile, file, includedFiles);
 
         expandImageRepos(tieFile);
+
+        if (tieFile.apps == null) {
+
+          // lets see if we can auto generate an app
+          var project = buildProject();
+
+          if (project != null) {
+            // generate the very minimum app - gets expanded in build/deploy
+            var genApp = App();
+            genApp.name = project.name;
+            tieFile.apps = [];
+            tieFile.apps!.add(genApp);
+          }
+        }
 
         if (tieFile.apps != null) {
           for (var app in tieFile.apps!) {

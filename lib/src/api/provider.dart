@@ -2,7 +2,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:meta/meta.dart';
 import 'package:tiecd/src/api/types.dart';
+import 'package:tiecd/src/commands/skopeo.dart';
+import 'package:tiecd/src/commands/umoci.dart';
 
 import '../util.dart';
 import 'dsl.dart';
@@ -10,10 +13,9 @@ import 'dsl.dart';
 class TieContext {
   Config config;
   List<ImageRepository> repositories;
-  Environment environment;
   App app;
 
-  TieContext(this.config, this.repositories, this.environment, this.app);
+  TieContext(this.config, this.repositories, this.app);
 
   Map<String, String> getEnv() {
     // build properties
@@ -51,6 +53,22 @@ class TieContext {
   }
 }
 
+class DeployContext extends TieContext {
+
+  Environment environment;
+
+  DeployContext(super.config, super.repositories, this.environment, super.app);
+
+}
+
+class BuildContext extends TieContext {
+
+  ProjectProvider projectProvider;
+
+  BuildContext(super.config, super.repositories, this.projectProvider, super.app);
+
+}
+
 void readProperties(Config config, String fileName, Map<String,String> properties) {
   if (File('${config.baseDir}/$fileName').existsSync()) {
     var value = File('${config.baseDir}/$fileName').readAsStringSync();
@@ -71,17 +89,51 @@ void readProperties(Config config, String fileName, Map<String,String> propertie
 }
 
 
-abstract class TieProvider {
+
+
+abstract class DeployProvider {
   void expandEnvironment(Environment environment);
-  Future<void> login(TieContext tieContext);
-  Future<void> logoff(TieContext tieContext);
-  Future<void> processImage(TieContext tieContext);
-  Future<void> processConfig(TieContext tieContext);
-  Future<void> processSecrets(TieContext tieContext);
-  Future<void> processHelm(TieContext tieContext);
-  Future<String> processDeploy(TieContext tieContext);
-  Future<void> runLocalCommands(TieContext tieContext, List<Command> command);
-  Future<void> removeHelm(TieContext tieContext);
+  Future<void> login(DeployContext deployContext);
+  Future<void> logoff(DeployContext deployContext);
+  Future<void> processImage(DeployContext deployContext);
+  Future<void> processConfig(DeployContext deployContext);
+  Future<void> processSecrets(DeployContext deployContext);
+  Future<void> processHelm(DeployContext deployContext);
+  Future<String> processDeploy(DeployContext deployContext);
+  Future<void> runScripts(DeployContext deployContext, List<String> scripts);
+  Future<void> removeHelm(DeployContext deployContext);
   String getDestinationRegistry(Environment environment);
   String getDestinationImageName(Environment environment, Image image);
+}
+
+abstract class ProjectProvider {
+  BuildType? _buildType;
+  String? _name;
+  String? _version;
+
+  @protected
+  BuildType? get buildType => _buildType;
+  @protected
+  set buildType(BuildType? buildType) => _buildType = buildType;
+
+  @protected
+  String? get name => _name;
+  @protected
+  set name(String? name) => _name = name;
+
+  @protected
+  String? get version => _version;
+  @protected
+  set version(String? version) => _version = version;
+
+  void init();
+  bool isProject();
+
+  List<String>? beforeBuildScripts();
+  List<String>? buildScripts();
+  List<String>? afterBuildScripts();
+  Map<String,String> buildEnv();
+  String getBaseImage();
+  void copyArtifactsIntoImage(UmociCommand umoci);
+  List<String> getUmociOptions();
 }

@@ -7,6 +7,7 @@ const greenChar = "\u001b[32m";
 const resetChar = "\u001b[0m";
 
 class Log {
+
   static void info(String message) {
     print("[TIECD] $message");
   }

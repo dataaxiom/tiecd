@@ -21,34 +21,34 @@ class GKEProvider extends KubernetesProvider {
   }
 
   @override
-  Future<void> login(TieContext tieContext) async {
+  Future<void> login(DeployContext deployContext) async {
 
     // if a kube_config hasn't been provided use gcloud service account login approach
-    if (tieContext.environment.apiConfig == null) {
+    if (deployContext.environment.apiConfig == null) {
       // preform a gcloud login
-      if (tieContext.environment.serviceAccountName.isNullOrEmpty) {
+      if (deployContext.environment.serviceAccountName.isNullOrEmpty) {
         throw TieError("environment serviceAccountName has not been set");
       }
-      if (tieContext.environment.projectId.isNullOrEmpty) {
+      if (deployContext.environment.projectId.isNullOrEmpty) {
         throw TieError("environment projectId has not been set");
       }
-      if (tieContext.environment.zone.isNullOrEmpty) {
+      if (deployContext.environment.zone.isNullOrEmpty) {
         throw TieError("environment zone has not been set");
       }
-      if (tieContext.environment.name.isNullOrEmpty) {
+      if (deployContext.environment.name.isNullOrEmpty) {
         throw TieError("environment name has not been set, set to cluster name");
       }
 
-      if (tieContext.environment.apiClientKeyFile.isNotNullNorEmpty) {
-        if (File(tieContext.environment.apiClientKeyFile!).existsSync()) {
-          _keyFile = tieContext.environment.apiClientKeyFile!;
+      if (deployContext.environment.apiClientKeyFile.isNotNullNorEmpty) {
+        if (File(deployContext.environment.apiClientKeyFile!).existsSync()) {
+          _keyFile = deployContext.environment.apiClientKeyFile!;
         } else {
-          throw TieError("environment apiClientKeyFile: $tieContext.environment.apiClientKeyFile doest not exist");
+          throw TieError("environment apiClientKeyFile: $deployContext.environment.apiClientKeyFile doest not exist");
         }
       } else {
-        if (tieContext.environment.apiClientKey.isNotNullNorEmpty) {
+        if (deployContext.environment.apiClientKey.isNotNullNorEmpty) {
           _keyFile = "${config.scratchDir}/${Uuid().v4()}";
-          File(_keyFile!).writeAsStringSync(tieContext.environment.apiClientKey!);
+          File(_keyFile!).writeAsStringSync(deployContext.environment.apiClientKey!);
           _keyFileOutputted = true;
         } else {
           throw TieError("environment apiClientKey/apiClientKeyFile has not been set");
@@ -56,7 +56,7 @@ class GKEProvider extends KubernetesProvider {
       }
 
       // gcloud auth activate-service-account ci-cd-pipeline@PROJECT_ID.iam.gserviceaccount.com --key-file=gsa-key.json
-      List<String> args = ['auth', 'activate-service-account', '${tieContext.environment.serviceAccountName}@${tieContext.environment.projectId}.iam.gserviceaccount.com', '--key-file=$_keyFile'];
+      List<String> args = ['auth', 'activate-service-account', '${deployContext.environment.serviceAccountName}@${deployContext.environment.projectId}.iam.gserviceaccount.com', '--key-file=$_keyFile'];
       Log.traceCommand(config,'gcloud',args);
       var process = await Process.start('gcloud', args, runInShell: true);
       process.stdout.transform(utf8.decoder).forEach(print);
@@ -66,7 +66,7 @@ class GKEProvider extends KubernetesProvider {
       }
 
       // gcloud config set project PROJECT_ID
-      args = ['config', 'set', 'project', tieContext.environment.projectId!];
+      args = ['config', 'set', 'project', deployContext.environment.projectId!];
       Log.traceCommand(config,'gcloud',args);
       process = await Process.start('gcloud', args, runInShell: true);
       process.stdout.transform(utf8.decoder).forEach(print);
@@ -77,7 +77,7 @@ class GKEProvider extends KubernetesProvider {
 
       // setup kube_config file
       // gcloud container clusters get-credentials CLUSTER_NAME --zone=COMPUTE_ZONE
-      args = ['container', 'clusters', 'get-credentials', tieContext.environment.name!, '--zone=${tieContext.environment.zone}'];
+      args = ['container', 'clusters', 'get-credentials', deployContext.environment.name!, '--zone=${deployContext.environment.zone}'];
       Log.traceCommand(config,'gcloud',args);
       process = await Process.start('gcloud', args, runInShell: true);
       process.stdout.transform(utf8.decoder).forEach(print);
@@ -87,18 +87,18 @@ class GKEProvider extends KubernetesProvider {
       }
 
       // set the api config to generated kubeconfig
-      tieContext.environment.apiConfigFile = kubeConfigFilename;
+      deployContext.environment.apiConfigFile = kubeConfigFilename;
 
       // expand the environment again now that a kubeconfig file has been created
-      await super.expandEnvironment(tieContext.environment);
+      await super.expandEnvironment(deployContext.environment);
 
       // now preform super login
-      await super.login(tieContext);
+      await super.login(deployContext);
     }
   }
 
   @override
-  Future<void> logoff(TieContext tieContext) async {
+  Future<void> logoff(DeployContext deployContext) async {
     List<String> args = ['auth', 'revoke', '--all'];
     Log.traceCommand(config,'gcloud',args);
     await Process.run('gcloud', args, runInShell: true);
@@ -107,7 +107,7 @@ class GKEProvider extends KubernetesProvider {
       _keyFileOutputted = false;
       _keyFile = null;
     }
-    super.logoff(tieContext);
+    super.logoff(deployContext);
   }
 
 

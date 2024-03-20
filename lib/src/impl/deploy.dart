@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:intl/intl.dart';
-import 'package:json2yaml/json2yaml.dart';
 import 'package:tiecd/src/extensions.dart';
 import 'package:tiecd/src/impl/base.dart';
 import 'package:tiecd/src/providers/gke_provider.dart';
@@ -17,6 +16,10 @@ import '../util.dart';
 class DeployExecutor extends BaseExecutor {
   DeployExecutor(super._config);
 
+  @override
+  String getVerb() {
+    return 'deploying';
+  }
   void preExpandEnvironment(Environment environment) {
     // if we haven't and apiType and we have apiConfig set check if it's kubernetes
     if (environment.apiType == null && environment.apiConfig != null) {
@@ -46,7 +49,7 @@ class DeployExecutor extends BaseExecutor {
     final Map<String, String> envVars = Platform.environment;
 
     String? environmentName = envVars['TIECD_ENVIRONMENT_LABEL'];
-    if (environmentName != null && environmentName != ('')) {
+    if (environmentName.isNotNullNorEmpty) {
       // we have have a specific subset of environments to target/use
       Log.green('Using environment $environmentName');
       List<Environment> subEnvironments = [];
@@ -76,7 +79,7 @@ class DeployExecutor extends BaseExecutor {
         environment = environment.clone();
 
         preExpandEnvironment(environment);
-        TieProvider provider;
+        DeployProvider provider;
         if (environment.apiType == null) {
           printObject('environment', 'Environment in use:', environment.toJson());
           throw TieError('provider type is not set');
@@ -101,18 +104,17 @@ class DeployExecutor extends BaseExecutor {
         Log.green(
             'processing app "${app.name!}" on ${environment.name!} environment');
         List<ImageRepository> imageRepositories = [];
-        if (tieFile.repositories != null &&
-            tieFile.repositories!.image != null) {
+        if (tieFile.repositories?.image != null) {
           imageRepositories = tieFile.repositories!.image!;
         }
-        var context = TieContext(config, imageRepositories, environment, app);
+        var context = DeployContext(config, imageRepositories, environment, app);
         var namespace = findNamespace(context);
         app.tiecdEnv ??= {};
 
-        if (namespace != null) {
-          app.tiecdEnv!["TIECD_NAMESPACE"] = namespace;
+        if (namespace.isNotNullNorEmpty) {
+          app.tiecdEnv!["TIECD_NAMESPACE"] = namespace!;
         }
-        if (environment.label != null) {
+        if (environment.label.isNotNullNorEmpty) {
           app.tiecdEnv!["TIECD_ENVIRONMENT_LABEL"] = environment.label!;
         }
 
@@ -135,28 +137,28 @@ class DeployExecutor extends BaseExecutor {
 
           if (action == Action.install) {
             await provider.processImage(context);
-            if (app.deploy!.preCommands != null) {
-              await provider.runLocalCommands(
-                  context, app.deploy!.preCommands!);
+            if (app.deploy!.beforeScripts != null) {
+              await provider.runScripts(
+                  context, app.deploy!.beforeScripts!);
             }
             await provider.processConfig(context);
             await provider.processSecrets(context);
-            if (app.deploy!.preDeployCommands != null) {
-              await provider.runLocalCommands(
-                  context, app.deploy!.preDeployCommands!);
+            if (app.deploy!.scripts != null) {
+              await provider.runScripts(
+                  context, app.deploy!.scripts!);
             }
             var checksum = await provider.processDeploy(context);
             if (checksum != '') {
-              context.app.tiecdEnv!["TIECD_TEMPLATE_HASH"] = checksum;
+              context.app.tiecdEnv!["TIECD_MANIFEST_HASH"] = checksum;
               if (config.verbose) {
                 Log.info(
-                    'adding TIECD_TEMPLATE_HASH to environment: $checksum');
+                    'adding TIECD_MANIFEST_HASH to environment: $checksum');
               }
             }
             await provider.processHelm(context);
-            if (app.deploy!.postCommands != null) {
-              await provider.runLocalCommands(
-                  context, app.deploy!.postCommands!);
+            if (app.deploy!.afterScripts != null) {
+              await provider.runScripts(
+                  context, app.deploy!.afterScripts!);
             }
           } else if (action == Action.uninstall) {
             await provider.removeHelm(context);

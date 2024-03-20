@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:tiecd/src/extensions.dart';
+
 import 'api/provider.dart';
 import 'api/types.dart';
+import 'log.dart';
 
 String varExpandByLine(String value, String fileExtension) {
   return varExpandByLineWithProperties(value, fileExtension, null);
@@ -95,10 +98,9 @@ String varExpandByLineWithProperties(
   return newString;
 }
 
-String findNamespace(TieContext tieContext) {
-  var namespace = tieContext.app.deploy!.namespace;
-  namespace ??= tieContext.environment.namespace;
-  namespace ??= 'default';
+String? findNamespace(DeployContext deployContext) {
+  var namespace = deployContext.app.deploy!.namespace;
+  namespace ??= deployContext.environment.namespace;
   return namespace;
 }
 
@@ -141,19 +143,6 @@ String expandFileByNameWithProperties(
   return builder;
 }
 
-bool isPassword(String value) {
-  var lower = value.toLowerCase();
-  if (lower.contains('pass') ||
-      lower.contains('secret') ||
-      lower.contains('pwd') ||
-      lower.contains('token') ||
-      lower.contains('enc(')) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
 List<String> split(String string, String separator, {int max = 0}) {
   List<String> result = [];
 
@@ -174,6 +163,18 @@ List<String> split(String string, String separator, {int max = 0}) {
   }
 
   return result;
+}
+
+bool isPassword(Config config, String value) {
+  bool isSecret = false;
+  for (var label in config.secretLabelSet) {
+    if (value.toLowerCase().contains(label) &&
+        !(value.startsWith('\${') && value.endsWith('}'))) {
+      isSecret = true;
+      break;
+    }
+  }
+  return isSecret;
 }
 
 void sanitizeString(Config config, String key, String value, Map<String, dynamic> json) {
@@ -212,4 +213,25 @@ void sanitizeDoc(Config config, Map<String, dynamic> json) {
       sanitizeString(config,key,value,json);
     }
   });
+}
+
+Future<void> runScript(TieContext tieContext, String script, {Map<String,String>? environment}) async {
+  if (script.isNullOrEmpty) {
+    throw TieError('script can not be empty in app: ${tieContext.app.name}');
+  }
+  Log.info('running local command: $script');
+  var env = Map.of(tieContext.getEnv());
+  env.remove('TIECD_APPS');
+  env.remove('TIECD_FILES');
+  if (environment != null) {
+    environment.forEach((key, value) => env[key] = value);
+  }
+  env['PATH'] = '${env['PATH']}:.'; // linux specific
+  var process = await Process.start('/bin/sh', ['-c',script],environment: env,
+      workingDirectory: tieContext.config.baseDir);
+  process.stdout.transform(utf8.decoder).forEach((line) {stdout.write(line);});
+  process.stderr.transform(utf8.decoder).forEach((line) {stdout.write(line);});
+  if (await process.exitCode != 0) {
+    throw TieError('running command: $script');
+  }
 }

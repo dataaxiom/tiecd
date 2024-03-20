@@ -20,8 +20,8 @@ import '../commands/skopeo.dart';
 import '../log.dart';
 import '../util.dart';
 
-class KubernetesProvider implements TieProvider {
-  Config _config;
+class KubernetesProvider implements DeployProvider {
+  final Config _config;
   String? _kubeConfigFilename;
   KubernetesClient? _kubernetesClient;
   KubernetesClient? kubernetesClient;
@@ -129,57 +129,58 @@ class KubernetesProvider implements TieProvider {
   }
 
   @override
-  Future<void> login(TieContext tieContext) async {
-    var environmentName = tieContext.environment.name;
+  Future<void> login(DeployContext deployContext) async {
+    var environmentName = deployContext.environment.name;
     environmentName ??= '';
-    if (tieContext.environment.apiUrl == null) {
+    if (deployContext.environment.apiUrl.isNullOrEmpty) {
       throw TieError("cluster $environmentName apiUrl is not set");
     }
-    if (tieContext.environment.apiToken == null &&
-        tieContext.environment.apiClientCert == null &&
-        tieContext.environment.apiClientKey == null) {
+    if (deployContext.environment.apiToken.isNullOrEmpty &&
+        deployContext.environment.apiClientCert.isNullOrEmpty &&
+        deployContext.environment.apiClientKey.isNullOrEmpty) {
       throw TieError(
           "cluster $environmentName apiToken or apiClientCert/apiClientKey is not set");
     }
     // if we still don't have a name
-    tieContext.environment.name ??= tieContext.environment.apiUrl;
+    deployContext.environment.name ??= deployContext.environment.apiUrl;
 
     // only output if file level config isn't already created
     if (!File(_kubeConfigFilename!).existsSync()) {
-      if (tieContext.environment.apiConfig != null) {
-        File(_kubeConfigFilename!)
-            .writeAsStringSync(tieContext.environment.apiConfig!, flush: true);
+      if (deployContext.environment.apiConfig.isNotNullNorEmpty) {
+        File(_kubeConfigFilename!).writeAsStringSync(
+            deployContext.environment.apiConfig!,
+            flush: true);
         // set restricted file permissions
         chmod(_kubeConfigFilename!, "400");
       }
     }
     SecurityContext context = SecurityContext(withTrustedRoots: true);
     HttpClient httpClient = HttpClient(context: context);
-    if (tieContext.environment.apiTlsVerify == false) {
+    if (deployContext.environment.apiTlsVerify == false) {
       // todo - probably should narrow the callback to only the api endpoint
       httpClient.badCertificateCallback =
           (X509Certificate cert, String host, int port) => true;
     }
-    if (tieContext.environment.apiClientCA != null) {
+    if (deployContext.environment.apiClientCA != null) {
       context.setTrustedCertificatesBytes(
-          base64.decode(tieContext.environment.apiClientCA!));
+          base64.decode(deployContext.environment.apiClientCA!));
     }
     _ioClient = IOClient(httpClient);
 
-    if (tieContext.environment.apiToken != null) {
+    if (deployContext.environment.apiToken.isNotNullNorEmpty) {
       _kubernetesClient = KubernetesClient(
-          serverUrl: tieContext.environment.apiUrl!,
-          accessToken: tieContext.environment.apiToken!,
+          serverUrl: deployContext.environment.apiUrl!,
+          accessToken: deployContext.environment.apiToken!,
           httpClient: _ioClient);
-    } else if (tieContext.environment.apiClientCert != null &&
-        tieContext.environment.apiClientKey != null) {
+    } else if (deployContext.environment.apiClientCert.isNotNullNorEmpty &&
+        deployContext.environment.apiClientKey.isNotNullNorEmpty) {
       context.useCertificateChainBytes(
-          base64.decode(tieContext.environment.apiClientCert!));
+          base64.decode(deployContext.environment.apiClientCert!));
       context.usePrivateKeyBytes(
-          base64.decode(tieContext.environment.apiClientKey!));
+          base64.decode(deployContext.environment.apiClientKey!));
 
       _kubernetesClient = KubernetesClient(
-          serverUrl: tieContext.environment.apiUrl!,
+          serverUrl: deployContext.environment.apiUrl!,
           accessToken: '',
           httpClient: _ioClient);
     }
@@ -194,8 +195,8 @@ class KubernetesProvider implements TieProvider {
   }
 
   @override
-  Future<void> logoff(TieContext tieContext) async {
-    if (_kubeConfigFilename != null &&
+  Future<void> logoff(DeployContext deployContext) async {
+    if (_kubeConfigFilename.isNotNullNorEmpty &&
         File(_kubeConfigFilename!).existsSync()) {
       File(_kubeConfigFilename!).deleteSync();
     }
@@ -214,41 +215,43 @@ class KubernetesProvider implements TieProvider {
     return image.name!;
   }
 
-  String buildNamespace(TieContext tieContext, {String? namespace}) {
+  String? buildNamespace(DeployContext deployContext, {String? namespace}) {
     var buildName = namespace; // maybe we've been passed one
-    buildName ??= findNamespace(tieContext);
-    // create namespace if necessary
-    if (_config.createNamespaces &&
-        !_namespaces.contains(buildName) &&
-        buildName != 'default') {
-      var namespaceJson = {
-        "apiVersion": "v1",
-        "kind": "Namespace",
-        "metadata": {
-          "name": buildName,
-        }
-      };
-      Log.info('creating namespace $buildName');
-      var v1namespace = api_core_v1.Namespace.fromJson(namespaceJson);
-      _kubernetesClient!.createCoreV1Namespace(body: v1namespace);
+    buildName ??= findNamespace(deployContext);
+    if (buildName != null) {
+      // create namespace if necessary
+      if (_config.createNamespaces &&
+          !_namespaces.contains(buildName) &&
+          buildName != 'default') {
+        var namespaceJson = {
+          "apiVersion": "v1",
+          "kind": "Namespace",
+          "metadata": {
+            "name": buildName,
+          }
+        };
+        Log.info('creating namespace $buildName');
+        var v1namespace = api_core_v1.Namespace.fromJson(namespaceJson);
+        _kubernetesClient!.createCoreV1Namespace(body: v1namespace);
+      }
     }
     return buildName;
   }
 
   @override
-  Future<void> processImage(TieContext tieContext) async {
-    if (tieContext.app.images != null) {
+  Future<void> processImage(DeployContext deployContext) async {
+    if (deployContext.app.images != null) {
       var skopeoCmd = SkopeoCommand(_config);
-      var images = tieContext.app.images;
+      var images = deployContext.app.images;
       if (images != null) {
         for (var image in images) {
           ImageRepository? imageRepository;
-          if (tieContext.repositories.length == 1) {
-            imageRepository = tieContext.repositories[0];
-          } else if (tieContext.repositories.length > 1) {
+          if (deployContext.repositories.length == 1) {
+            imageRepository = deployContext.repositories[0];
+          } else if (deployContext.repositories.length > 1) {
             // find the correct one
             if (image.registry != null) {
-              for (var registry in tieContext.repositories) {
+              for (var registry in deployContext.repositories) {
                 if (image.registry == registry.name) {
                   imageRepository = registry;
                   break;
@@ -256,7 +259,7 @@ class KubernetesProvider implements TieProvider {
               }
             } else {
               // let's just use first repo by default
-              imageRepository = tieContext.repositories[0];
+              imageRepository = deployContext.repositories[0];
             }
           } else {
             if (image.registry != null) {
@@ -268,25 +271,25 @@ class KubernetesProvider implements TieProvider {
           }
 
           if (imageRepository != null) {
-            if (imageRepository.url != null) {
+            if (imageRepository.url.isNotNullNorEmpty) {
               skopeoCmd.srcRepo = imageRepository.url;
             } else {
               throw TieError("Source image repo is empty");
             }
-            if (imageRepository.username != null) {
+            if (imageRepository.username.isNotNullNorEmpty) {
               skopeoCmd.srcUsername = imageRepository.username!;
             }
             if (imageRepository.password != null) {
               skopeoCmd.srcPassword = imageRepository.password!;
-            } else if (imageRepository.token != null) {
+            } else if (imageRepository.token.isNotNullNorEmpty) {
               skopeoCmd.srcToken = imageRepository.token!;
             }
             if (imageRepository.tlsVerify != null) {
               skopeoCmd.srcTlsVerify = imageRepository.tlsVerify!;
             }
 
-            if  (tieContext.environment.repository != null) {
-              var destImageRepo = tieContext.environment.repository;
+            if (deployContext.environment.repository != null) {
+              var destImageRepo = deployContext.environment.repository;
               if (destImageRepo != null) {
                 if (destImageRepo.url != null) {
                   skopeoCmd.destRepo = destImageRepo.url!;
@@ -294,13 +297,13 @@ class KubernetesProvider implements TieProvider {
                   throw TieError(
                       'Destination image repo url is empty in environment');
                 }
-                if (destImageRepo.username != null) {
+                if (destImageRepo.username.isNotNullNorEmpty) {
                   skopeoCmd.destUsername = destImageRepo.username!;
                 }
-                if (destImageRepo.password != null) {
+                if (destImageRepo.password.isNotNullNorEmpty) {
                   skopeoCmd.destPassword = destImageRepo.password!;
                 }
-                if (destImageRepo.token != null) {
+                if (destImageRepo.token.isNotNullNorEmpty) {
                   skopeoCmd.destToken = destImageRepo.token!;
                 }
                 if (destImageRepo.tlsVerify != null) {
@@ -318,41 +321,49 @@ class KubernetesProvider implements TieProvider {
               var imageName = "${image.name}:$version";
               // image stream doesn't support sub paths
               var destImageName =
-                  getDestinationImageName(tieContext.environment, image);
+                  getDestinationImageName(deployContext.environment, image);
               var fullDestImageName = "$destImageName:$version";
 
               // get the sha for the image and setup deploy vars
               var sha = await skopeoCmd.imageSha(imageName);
 
-              if (_config.verbose) {
-                if (images.length == 1) {
-                  tieContext.app.tiecdEnv!['TIECD_IMAGE_SHA'] = sha;
+              if (images.length == 1) {
+                deployContext.app.tiecdEnv!['TIECD_IMAGE_SHA'] = sha;
+                deployContext.app.tiecdEnv!['TIECD_IMAGE_NAME'] = destImageName;
+                deployContext.app.tiecdEnv!['TIECD_IMAGE_VERSION'] = version;
+                if (_config.verbose) {
                   Log.info('adding TIECD_IMAGE_SHA to environment: $sha');
-                  tieContext.app.tiecdEnv!['TIECD_IMAGE_NAME'] = destImageName;
                   Log.info(
                       'adding TIECD_IMAGE_NAME to environment: $destImageName');
-                  tieContext.app.tiecdEnv!['TIECD_IMAGE_VERSION'] = version;
                   Log.info(
                       'adding TIECD_IMAGE_VERSION to environment: $version');
                 }
-                var envImageName = image.name!.toUpperCase().replaceAll(
-                    '-', "_").replaceAll('/', '_');
-                tieContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_SHA'] =
+                var envImageName = image.name!
+                    .toUpperCase()
+                    .replaceAll('-', "_")
+                    .replaceAll('/', '_');
+                deployContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_SHA'] =
                     sha;
-                Log.info(
-                    'adding TIECD_IMAGE_${envImageName}_SHA to environment: $sha');
-                tieContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_NAME'] =
+                deployContext
+                        .app.tiecdEnv!['TIECD_IMAGE_${envImageName}_NAME'] =
                     destImageName;
-                Log.info(
-                    'adding TIECD_IMAGE_${envImageName}_NAME to environment: $destImageName');
-                tieContext.app
+                deployContext.app
                     .tiecdEnv!['TIECD_IMAGE_${envImageName}_VERSION'] = version;
-                Log.info(
-                    'adding TIECD_IMAGE_${envImageName}_VERSION to environment: $version');
-              }
-              // push the image if setup
-              if (tieContext.environment.repository != null && tieContext.environment.repository!.mode == ImageMode.push) {
-                await skopeoCmd.pushImage(imageName, fullDestImageName);
+
+                if (_config.verbose) {
+                  Log.info(
+                      'adding TIECD_IMAGE_${envImageName}_SHA to environment: $sha');
+                  Log.info(
+                      'adding TIECD_IMAGE_${envImageName}_NAME to environment: $destImageName');
+                  Log.info(
+                      'adding TIECD_IMAGE_${envImageName}_VERSION to environment: $version');
+                }
+
+                // push the image if setup
+                if (deployContext.environment.repository?.mode ==
+                    ImageMode.push) {
+                  await skopeoCmd.deployImage(imageName, fullDestImageName);
+                }
               }
             } else {
               throw TieError('image name can not be null');
@@ -395,10 +406,10 @@ class KubernetesProvider implements TieProvider {
   }
 
   @override
-  Future<void> processConfig(TieContext tieContext) async {
-    if (tieContext.app.deploy!.mountFiles != null) {
+  Future<void> processConfig(DeployContext deployContext) async {
+    if (deployContext.app.deploy!.mountFiles != null) {
       StringBuffer cksum = StringBuffer();
-      for (var mountFile in tieContext.app.deploy!.mountFiles!) {
+      for (var mountFile in deployContext.app.deploy!.mountFiles!) {
         if (mountFile.file != null &&
             File("${_config.baseDir}/${mountFile.file}").existsSync()) {
           String mountPath = "";
@@ -411,7 +422,8 @@ class KubernetesProvider implements TieProvider {
             mountFile.mount = mountPath;
           }
 
-          var logicalName = generateMountName(tieContext.app.name!, mountPath);
+          var logicalName =
+              generateMountName(deployContext.app.name!, mountPath);
           var strippedName = stripConfigFilePath(mountPath);
 
           // properties expansion
@@ -424,21 +436,21 @@ class KubernetesProvider implements TieProvider {
             "metadata": {
               "name": logicalName,
               "labels": {
-                "app.kubernetes.io/component": tieContext.app.label,
-                "app.kubernetes.io/instance": tieContext.app.label,
+                "app.kubernetes.io/component": deployContext.app.label,
+                "app.kubernetes.io/instance": deployContext.app.label,
                 "app.kubernetes.io/managed-by": "tiecd",
-                "app.kubernetes.io/name": tieContext.app.label
+                "app.kubernetes.io/name": deployContext.app.label
               }
             },
             "data": {strippedName: rawFile}
           };
 
           var kubectl = KubeCtlCommand(_config, _kubeConfigFilename!);
-          var namespace = buildNamespace(tieContext);
+          var namespace = buildNamespace(deployContext);
 
-          // apply the template and save the cksum hash
-          cksum.write(await kubectl.applyTemplateByValue(mountFile.file!,
-              json2yaml(configMap), tieContext.getEnv(), namespace));
+          // apply the manifest and save the cksum hash
+          cksum.write(await kubectl.applyManifestByValue(mountFile.file!,
+              json2yaml(configMap), deployContext.getEnv(), namespace));
         } else {
           if (mountFile.file == null) {
             throw TieError('file attribute does not exist in mountFile entry');
@@ -450,21 +462,20 @@ class KubernetesProvider implements TieProvider {
       // calc total config checksum
       var bytes = utf8.encode(cksum.toString());
       var digest = md5.convert(bytes);
-      tieContext.app.tiecdEnv!['TIECD_CONFIG_HASH'] = digest.toString();
+      deployContext.app.tiecdEnv!['TIECD_CONFIG_HASH'] = digest.toString();
       Log.info('adding TIECD_CONFIG_HASH to environment: $digest');
-
     }
   }
 
   @override
-  Future<void> processSecrets(TieContext tieContext) async {
+  Future<void> processSecrets(DeployContext deployContext) async {
     //throw new Error('Method not implemented.');
   }
 
   @override
-  Future<void> processHelm(TieContext tieContext) async {
-    if (tieContext.app.deploy!.helmChart != null) {
-      var chart = tieContext.app.deploy!.helmChart!;
+  Future<void> processHelm(DeployContext deployContext) async {
+    if (deployContext.app.deploy!.helmChart != null) {
+      var chart = deployContext.app.deploy!.helmChart!;
       var chartLog = chart.url;
       if (chartLog != null) {
         if (!chartLog.startsWith("oci://") && chart.chart != null) {
@@ -476,13 +487,13 @@ class KubernetesProvider implements TieProvider {
         Log.info('applying helm chart: $chartLog');
         var helmCommand = HelmCommand(_config, _kubeConfigFilename!);
         // verify the namespace
-        buildNamespace(tieContext, namespace: chart.namespace);
+        buildNamespace(deployContext, namespace: chart.namespace);
         if (chart.url != null && !chart.url!.startsWith("oci://")) {
-          await helmCommand.addRepo(tieContext, chart);
-          await helmCommand.update(tieContext);
+          await helmCommand.addRepo(deployContext, chart);
+          await helmCommand.update(deployContext);
         }
-        await helmCommand.install(tieContext, chart);
-        helmCommand.clean(tieContext, chart);
+        await helmCommand.install(deployContext, chart);
+        helmCommand.clean(deployContext, chart);
       } else {
         throw TieError('helm chart url is not set');
       }
@@ -490,41 +501,49 @@ class KubernetesProvider implements TieProvider {
   }
 
   @override
-  Future<void> removeHelm(TieContext tieContext) async {
-    if (tieContext.app.deploy!.helmChart != null) {
-      var chart = tieContext.app.deploy!.helmChart!;
+  Future<void> removeHelm(DeployContext deployContext) async {
+    if (deployContext.app.deploy!.helmChart != null) {
+      var chart = deployContext.app.deploy!.helmChart!;
       var helmCommand = HelmCommand(_config, _kubeConfigFilename!);
-      await helmCommand.remove(tieContext, chart);
-      helmCommand.clean(tieContext, chart);
+      await helmCommand.remove(deployContext, chart);
+      helmCommand.clean(deployContext, chart);
     }
   }
 
   @override
-  Future<String> processDeploy(TieContext tieContext) async {
+  Future<String> processDeploy(DeployContext deployContext) async {
     var checkSum = '';
-    if (tieContext.app.deploy!.templateFiles != null) {
-      for (var templateFile in tieContext.app.deploy!.templateFiles!) {
+    if (deployContext.app.deploy!.manifests != null) {
+      for (var templateFile in deployContext.app.deploy!.manifests!) {
         var kubectl = KubeCtlCommand(_config, _kubeConfigFilename!);
-        var namespace = buildNamespace(tieContext);
+        var namespace = buildNamespace(deployContext);
 
         // pre expand the file to check the deployment status
         var expanded = expandFileByNameWithProperties(
-            '${_config.baseDir}/$templateFile', tieContext.getEnv());
+            '${_config.baseDir}/$templateFile', deployContext.getEnv());
         // split the yaml doc if necessary
         List<String> docs = expanded.split(RegExp(multiLine: true, "^---\$"));
         // get all the current revisions - 0 if not deployed - currently supporting Deployment/StatefulSet/DeploymentConfig
         Map<String, Map<String, String>> revisions = {};
         for (var doc in docs) {
           Map yamlDoc = loadYaml(doc);
-          String name = yamlDoc["metadata"]["name"];
+          String? name = yamlDoc["metadata"]["name"];
           if (name != null) {
+            String? nameSpaceInUse = namespace;
+            String? docNamespace = yamlDoc["metadata"]["namespace"];
+            if (docNamespace != null) {
+              nameSpaceInUse =
+                  buildNamespace(deployContext, namespace: docNamespace);
+            }
+            nameSpaceInUse ??= "default";
+
             // lets now get the revision
             if (yamlDoc["kind"] == "Deployment") {
               int currentVersion = 0;
               try {
                 var deployment = await _kubernetesClient!
                     .readAppsV1NamespacedDeployment(
-                        name: name, namespace: namespace);
+                        name: name, namespace: nameSpaceInUse);
                 if (deployment.status != null &&
                     deployment.status!.observedGeneration != null) {
                   currentVersion = deployment.status!.observedGeneration!;
@@ -536,14 +555,15 @@ class KubernetesProvider implements TieProvider {
               }
               revisions['Deployment-$name'] = {
                 'name': name,
-                'version': currentVersion.toString()
+                'version': currentVersion.toString(),
+                'namespace': nameSpaceInUse
               };
             } else if (yamlDoc['kind'] == "StatefulSet") {
               int currentVersion = 0;
               try {
                 var deployment = await _kubernetesClient!
                     .readAppsV1NamespacedStatefulSet(
-                        name: name, namespace: namespace);
+                        name: name, namespace: nameSpaceInUse);
                 if (deployment.status != null &&
                     deployment.status!.observedGeneration != null) {
                   currentVersion = deployment.status!.observedGeneration!;
@@ -555,57 +575,57 @@ class KubernetesProvider implements TieProvider {
               }
               revisions['StatefulSet-$name'] = {
                 'name': name,
-                'version': currentVersion.toString()
+                'version': currentVersion.toString(),
+                'namespace': nameSpaceInUse
               };
             }
           }
         }
 
         // do the actual deployment
-        KubeCtlResult result = await kubectl.applyTemplateByFileName(
+        KubeCtlResult result = await kubectl.applyManifestByFileName(
             '${_config.baseDir}/$templateFile',
             '${_config.baseDir}/$templateFile',
-            tieContext.getEnv(),
+            deployContext.getEnv(),
             namespace);
         checkSum += result.output;
 
-        // sleep for 6 seconds to allow rollout status to update - if necessary
+        // sleep for 4 seconds to allow rollout status to update - if necessary
         if (revisions.isNotEmpty) {
           sleep(4);
         }
 
         // now check on the rollout status
         for (var entry in revisions.entries) {
+          var name = entry.value['name']!;
+          var version = entry.value['version']!;
+          var entryNamespace = entry.value['namespace'];
           if (entry.key.startsWith("Deployment-")) {
-            var deploymentName = entry.value['name']!;
-            var version = entry.value['version']!;
             var deployment = await _kubernetesClient!
                 .readAppsV1NamespacedDeployment(
-                    name: deploymentName, namespace: namespace);
+                    name: name, namespace: entryNamespace!);
             if (deployment.status != null &&
                 deployment.status!.observedGeneration != null) {
               var currentVersion = deployment.status!.observedGeneration!;
               if (currentVersion != int.parse(version)) {
                 Log.info(
-                    'latest revision for deployment/$deploymentName = $currentVersion');
+                    'latest revision for deployment/$name = $currentVersion');
                 await kubectl.waitForRollout(
-                    namespace, "Deployment", deploymentName, version);
+                    entryNamespace, "Deployment", name, version);
               }
             }
           } else if (entry.key.startsWith("StatefulSet-")) {
-            var statefulSetName = entry.value['name']!;
-            var version = entry.value['version']!;
             var statefulset = await _kubernetesClient!
                 .readAppsV1NamespacedStatefulSet(
-                    name: statefulSetName, namespace: namespace);
+                    name: name, namespace: entryNamespace!);
             if (statefulset.status != null &&
                 statefulset.status!.observedGeneration != null) {
               var currentVersion = statefulset.status!.observedGeneration!;
               if (currentVersion != int.parse(version)) {
                 Log.info(
-                    'latest revision for statefulset/$statefulSetName = $currentVersion');
+                    'latest revision for statefulset/$name = $currentVersion');
                 await kubectl.waitForRollout(
-                    namespace, "StatefulSet", statefulSetName, version);
+                    entryNamespace, "StatefulSet", name, version);
               }
             }
           }
@@ -615,59 +635,17 @@ class KubernetesProvider implements TieProvider {
     return checkSum;
   }
 
-  Future<void> runLocalCommand(TieContext tieContext, Command command) async {
-    var properties = tieContext.getEnv();
-
-    if (command.path == null) {
-      throw TieError('command path attribute not defined');
-    }
-    var filename = command.path!;
-    if (filename.startsWith('./')) {
-      filename = command.path!.substring(2);
-    }
-    if (!File("${_config.baseDir}/$filename").existsSync()) {
-      throw TieError('command does not exist: ${_config.baseDir}/$filename');
-    }
-
-    List<String> args = [];
-    var commandString = filename;
-    if (command.args != null) {
-      args = command.args!;
-      for (var arg in command.args!) {
-        commandString += ' $arg';
-      }
-    }
-    Log.info('running local command: $commandString');
-
-    var env = Map.of(tieContext.getEnv());
-    env.remove('TIECD_APPS');
-    env.remove('TIECD_FILES');
-    // use full path as working directory could be different
-    Directory current = Directory.current;
-    env['KUBECONFIG'] = "${current.path}/$_kubeConfigFilename";
-
-    if (!command.path!.startsWith('./')) {
-      command.path = './${command.path}';
-    }
-
-    var process = await Process.start(command.path!, args,
-        workingDirectory: _config.baseDir, environment: env, runInShell: true);
-    process.stdout.transform(utf8.decoder).forEach(print);
-    process.stderr.transform(utf8.decoder).forEach(print);
-    if (await process.exitCode != 0) {
-      throw TieError('running command: $commandString');
-    }
-  }
-
   @override
-  Future<void> runLocalCommands(
-      TieContext tieContext, List<Command> commands) async {
-    for (var command in commands) {
-      await runLocalCommand(tieContext, command);
+  Future<void> runScripts(
+      DeployContext deployContext, List<String> scripts) async {
+    Map<String, String> env = {};
+    env['KUBECONFIG'] = _kubeConfigFilename!;
+    for (var script in scripts) {
+      await runScript(deployContext, script, environment: env);
     }
   }
 
-  Future<void> processRemove(TieContext tieContext) async {
+  Future<void> processRemove(DeployContext deployContext) async {
     //throw new Error('Method not implemented.');
   }
 }

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
+import 'package:tiecd/src/extensions.dart';
 import 'package:uuid/uuid.dart';
 
 import '../api/types.dart';
@@ -10,11 +11,11 @@ import '../log.dart';
 
 class KubeCtlResult {
   final String _output;
-  final String _template;
+  final String _manifest;
 
-  KubeCtlResult(this._output, this._template);
+  KubeCtlResult(this._output, this._manifest);
 
-  String get template => _template;
+  String get manifest => _manifest;
   String get output => _output;
 }
 
@@ -24,26 +25,26 @@ class KubeCtlCommand {
 
   KubeCtlCommand(this._config, this._kubeConfigFile);
 
-  Future<KubeCtlResult> applyTemplateByValue(
+  Future<KubeCtlResult> applyManifestByValue(
       String filename,
-      String templateValue,
+      String manifestValue,
       Map<String, String> properties,
       String? namespace) async {
-    var templateFile = "${_config.scratchDir}/${Uuid().v4()}";
-    File(templateFile).writeAsStringSync(templateValue);
-    var result = await applyTemplateByFileName(
-        filename, templateFile, properties, namespace);
-    File(templateFile).deleteSync();
+    var manifest = "${_config.scratchDir}/${Uuid().v4()}";
+    File(manifest).writeAsStringSync(manifestValue);
+    var result = await applyManifestByFileName(
+        filename, manifest, properties, namespace);
+    File(manifest).deleteSync();
     return result;
   }
 
-  Future<KubeCtlResult> applyTemplateByFileName(
+  Future<KubeCtlResult> applyManifestByFileName(
       String filename,
-      String templateFileName,
+      String manifestFileName,
       Map<String, String> properties,
       String? namespace) async {
-    // expand any variables in the template
-    var expanded = expandFileByNameWithProperties(templateFileName, properties);
+    // expand any variables in the manifest
+    var expanded = expandFileByNameWithProperties(manifestFileName, properties);
     var bytes = utf8.encode(expanded);
     var digest = md5.convert(bytes);
 
@@ -51,11 +52,11 @@ class KubeCtlCommand {
     try {
       File(processedFilename).writeAsStringSync(expanded);
       List<String> args = [];
-      if (namespace != null && namespace != "") {
+      if (namespace.isNotNullNorEmpty) {
         args.add("--namespace=$namespace");
       }
       args.add("--wait=true");
-      Log.info("applying template: $filename");
+      Log.info("applying manifest: $filename");
 
       Log.traceCommand(_config, 'kubectl apply -f $filename', args);
 
@@ -64,10 +65,10 @@ class KubeCtlCommand {
       args = ['apply', '-f', processedFilename, ...args];
       var process = await Process.start('kubectl', args,
           environment: kubeProperties, runInShell: true);
-      process.stdout.transform(utf8.decoder).forEach(print);
-      process.stderr.transform(utf8.decoder).forEach(print);
+      process.stdout.transform(utf8.decoder).forEach((line) {stdout.write(line);});
+      process.stderr.transform(utf8.decoder).forEach((line) {stdout.write(line);});
       if (await process.exitCode != 0) {
-        throw TieError("applying template: $filename");
+        throw TieError("applying manifest: $filename");
       }
       if (File(processedFilename).existsSync()) {
         File(processedFilename).deleteSync();
@@ -88,7 +89,7 @@ class KubeCtlCommand {
     int revision = 0;
     try {
       List<String> args = [];
-      if (namespace != null && namespace != "") {
+      if (namespace.isNotNullNorEmpty) {
         args.add('--namespace=$namespace');
       }
       var kubeProperties = <String, String>{};
@@ -116,7 +117,7 @@ class KubeCtlCommand {
   Future<void> waitForRollout(
       String? namespace, String type, String name, String revision) async {
     List<String> args = [];
-    if (namespace != null && namespace != "") {
+    if (namespace.isNotNullNorEmpty) {
       args.add('--namespace=$namespace');
     }
     var kubeProperties = <String, String>{};
@@ -127,8 +128,8 @@ class KubeCtlCommand {
 
     var process = await Process.start('kubectl', args,
         environment: kubeProperties, runInShell: true);
-    process.stdout.transform(utf8.decoder).forEach(print);
-    process.stderr.transform(utf8.decoder).forEach(print);
+    process.stdout.transform(utf8.decoder).forEach((line) {stdout.write(line);});
+    process.stderr.transform(utf8.decoder).forEach((line) {stdout.write(line);});
     if (await process.exitCode != 0) {
       throw TieError("Rollout: $type/$name, revision:$revision failed.");
     }

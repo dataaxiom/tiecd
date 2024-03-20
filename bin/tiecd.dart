@@ -3,15 +3,18 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:tiecd/src/api/types.dart';
+import 'package:tiecd/src/impl/build.dart';
 import 'package:tiecd/src/impl/deploy.dart';
 import 'package:tiecd/src/log.dart';
 
 Map<String, String> envVars = Platform.environment;
 
 String setupStringValue(String? newValue, String? envName) {
-  return setupStringValueWithDefault('',newValue,envName);
+  return setupStringValueWithDefault('', newValue, envName);
 }
-String setupStringValueWithDefault(String? defaultValue, String? newValue, String? envName) {
+
+String setupStringValueWithDefault(
+    String? defaultValue, String? newValue, String? envName) {
   if (newValue != null) {
     if (newValue.startsWith('=')) {
       newValue = newValue.substring(1);
@@ -55,19 +58,22 @@ bool setupBoolValue(bool value, String? envName) {
 Future<void> processGitLog(Config config) async {
   // is this a git repository?
   if (File('.git/config').existsSync()) {
-
     // set safe directory to workspace for github runners
     if (envVars['GITHUB_WORKSPACE'] != null) {
-      var result = await Process.run('ls', ['config','--global','safe.directory',envVars['GITHUB_WORKSPACE']!]);
+      await Process.run('ls', [
+        'config',
+        '--global',
+        'safe.directory',
+        envVars['GITHUB_WORKSPACE']!
+      ]);
     }
 
     // check the the HEAD commit message for steps/files overrides
-    var buffer = await Process.run('git', ['log','-1','--pretty=%B']);
+    var buffer = await Process.run('git', ['log', '-1', '--pretty=%B']);
     var lines = buffer.stdout.split('/\r?\n/');
 
     // process files
     if (config.files == '') {
-
       var files = config.filesCommitPrefix.split('|');
       var regex = '';
       for (var file in files) {
@@ -77,12 +83,14 @@ Future<void> processGitLog(Config config) async {
       RegExp separator = RegExp(regex);
 
       for (var line in lines) {
-        var parts = line.replaceAll('\n','').split(separator);
+        var parts = line.replaceAll('\n', '').split(separator);
         if (parts.length == 2) {
           if (parts[1].contains(' ')) {
-            config.files = parts[1].substring(0,parts[1].indexOf(' ')).replaceAll('\n','');
+            config.files = parts[1]
+                .substring(0, parts[1].indexOf(' '))
+                .replaceAll('\n', '');
           } else {
-            config.files = parts[1].replaceAll('\n','');
+            config.files = parts[1].replaceAll('\n', '');
           }
           break; // ignore other lines
         } else if (parts.length > 2) {
@@ -94,7 +102,6 @@ Future<void> processGitLog(Config config) async {
 
     // process app
     if (config.apps == '') {
-
       var steps = config.appsCommitPrefix.split('|');
       var regex = '';
       for (var step in steps) {
@@ -104,13 +111,15 @@ Future<void> processGitLog(Config config) async {
       RegExp separator = RegExp(regex);
 
       for (var line in lines) {
-         var parts = line.split(separator);
+        var parts = line.split(separator);
         if (parts.length == 2) {
           // only take value up to first space
           if (parts[1].contains(' ')) {
-              config.apps = parts[1].substring(0,parts[1].indexOf(' ')).replaceAll('\n','');
+            config.apps = parts[1]
+                .substring(0, parts[1].indexOf(' '))
+                .replaceAll('\n', '');
           } else {
-            config.apps = parts[1].replaceAll('\n','');
+            config.apps = parts[1].replaceAll('\n', '');
           }
           break; // ignore other lines
         } else if (parts.length > 2) {
@@ -137,11 +146,12 @@ void showHeader(Config config) {
   }
   if (config.verbose) {
     Log.info(' --- Runtime Configuration ---');
+    Log.info(' base-dir: \t\t${config.baseDir}');
+    Log.info(' target: \t\t${config.target}');
     Log.info(' files:\t\t\t${config.files}');
     Log.info(' files-commit-prefix:\t${config.filesCommitPrefix}');
     Log.info(' apps:\t\t\t${config.apps}');
     Log.info(' apps-commit-prefix:\t${config.appsCommitPrefix}');
-    Log.info(' base-dir: \t\t${config.baseDir}');
     Log.info(' file-prefix:\t\t${config.filePrefix}');
     Log.info(' app-names-required:\t${config.appNamesRequired}');
     Log.info(' ignore-errors:\t\t${config.ignoreErrors}');
@@ -157,7 +167,6 @@ void showHeader(Config config) {
 }
 
 Future<Config> buildConfig(final ArgResults argResults) async {
-
   Config config = Config();
 
   // process args then override with environment variable values
@@ -170,9 +179,12 @@ Future<Config> buildConfig(final ArgResults argResults) async {
   await processGitLog(config);
 
   // now process reset of the configuration with higher precedence
-  config.files = setupStringValueWithDefault(config.files,argResults['files'], 'TIECD_FILES');
-  config.apps = setupStringValueWithDefault(config.apps, argResults['apps'], 'TIECD_APPS');
-  config.baseDir = setupStringValue(argResults['base-dir'], 'TIECD_BASEDIR');
+  config.baseDir = setupStringValue(argResults['base-dir'], 'TIECD_BASE_DIR');
+  config.target = setupStringValue(argResults['target'], 'TIECD_TARGET');
+  config.files = setupStringValueWithDefault(
+      config.files, argResults['files'], 'TIECD_FILES');
+  config.apps = setupStringValueWithDefault(
+      config.apps, argResults['apps'], 'TIECD_APPS');
   config.filePrefix =
       setupStringValue(argResults['file-prefix'], 'TIECD_FILE_PREFIX');
   config.appNamesRequired = setupBoolValue(
@@ -182,23 +194,23 @@ Future<Config> buildConfig(final ArgResults argResults) async {
   config.verbose = setupBoolValue(argResults['verbose'], 'TIECD_VERBOSE');
   config.traceGenerated =
       setupBoolValue(argResults['trace-generated'], 'TIECD_TRACE_GENERATED');
-  config.traceCommands =
-      setupBoolValue(argResults['trace-commands'], 'TIECD_TRACE_COMMANDS');
   config.traceTieFile =
       setupBoolValue(argResults['trace-tie-file'], 'TIECD_TRACE_TIE_FILE');
-  config.secretLabels =
-      setupStringValue(argResults['secret-labels'], 'TIECD_SECRET_LABELS');
-  config.banner =
-      setupBoolValue(argResults['banner'], 'TIECD_BANNER');
-  config.createNamespaces =
-      setupBoolValue(argResults['create-namespaces'], 'TIECD_CREATE_NAMESPACES');
-
+  config.traceCommands =
+      setupBoolValue(argResults['trace-commands'], 'TIECD_TRACE_COMMANDS');
   // verbose mode overrides
   if (config.verbose) {
     config.traceTieFile = true;
     config.traceCommands = true;
     config.traceGenerated = true;
   }
+  config.secretLabels =
+      setupStringValue(argResults['secret-labels'], 'TIECD_SECRET_LABELS');
+  config.banner = setupBoolValue(argResults['banner'], 'TIECD_BANNER');
+  config.createNamespaces = setupBoolValue(
+      argResults['create-namespaces'], 'TIECD_CREATE_NAMESPACES');
+
+
 
   // post config init
   var secetLabels = config.secretLabels.split('|');
@@ -220,12 +232,11 @@ Future<Config> buildConfig(final ArgResults argResults) async {
   return config;
 }
 
-
 class DeployCommand extends Command {
   @override
   final name = 'deploy';
   @override
-  final description = 'Run deployment process on current directory';
+  final description = 'Deploy process on current directory';
 
   // [run] may also return a Future.
   @override
@@ -245,80 +256,87 @@ class BuildCommand extends Command {
   @override
   final String name = 'build';
   @override
-  final String description = 'Auto build a container image';
+  final String description = 'Build project from source code';
 
   @override
   Future<void> run() async {
-    // [argResults] is set before [run()] is called and contains the flags/options
-    // passed to this command.
-    print(argResults!['all']);
-    //todo
+    var config = await buildConfig(globalResults!);
+    try {
+      BuildExecutor build = BuildExecutor(config);
+      await build.run();
+    } on TieError catch (error) {
+      Log.error(error.cause);
+      exit(1);
+    }
   }
 }
 
 Future<void> main(List<String> arguments) async {
-  var runner =
-      CommandRunner('tiecd', 'A simplified CICD toolchain for kubernetes deployments.');
+  var runner = CommandRunner('tiecd',
+      'The CICD toolchain to simplify building and deploying applications into the cloud.');
 
-  runner.argParser.addOption('files',
-      abbr: 'f', help: 'specific files to run, [env: TIECD_FILES]');
-  runner.argParser.addOption('files-commit-prefix',
-      abbr: 'i',
-      defaultsTo: 'file|files',
-      help:
-          'label used to select which files to process, i.e. files=... [env: TIECD_FILES_COMMIT_PREFIX]');
-  runner.argParser.addOption('apps',
-      abbr: 'a', help: 'override which apps to run [env: TIECD_APPS]');
-  runner.argParser.addOption('apps-commit-prefix',
-      abbr: 'c',
-      defaultsTo: 'app|apps|run|update',
-      help:
-          'label used to select which apps to process, i.e. apps=... [env: TIECD_APPS_COMMIT_PREFIX]');
   runner.argParser.addOption('base-dir',
       abbr: 'b',
       help:
-          'directory containing tie.yml and deployment files [env: TIECD_BASEDIR]');
+          'Directory containing tie.yml and deployment files [env: TIECD_BASE_DIR]');
+  runner.argParser.addOption('target',
+      abbr: 't',
+      help:
+      'Sub action to run [env: TIECD_TARGET]');
+  runner.argParser.addOption('files',
+      abbr: 'f', help: 'Specific files to run [env: TIECD_FILES]');
+  runner.argParser.addOption('files-commit-prefix',
+      defaultsTo: 'file|files',
+      help:
+          'String prefixes to search for in commit message to specify files to process, i.e. file=tieapp.yaml [env: TIECD_FILES_COMMIT_PREFIX]');
+  runner.argParser.addOption('apps',
+      abbr: 'a', help: 'Override which apps to run [env: TIECD_APPS]');
+  runner.argParser.addOption('apps-commit-prefix',
+      defaultsTo: 'app|apps|run|update',
+      help:
+          'String prefixes to search for commit message to specify apps to process, i.e. apps=myapp [env: TIECD_APPS_COMMIT_PREFIX]');
   runner.argParser.addOption('file-prefix',
       abbr: 'p',
       defaultsTo: 'tie',
       help:
-          'file prefix for tie.yml files, defaults to tie [env: TIECD_FILE_PREFIX]');
+          'File prefix for tie.yml files, defaults to tie [env: TIECD_FILE_PREFIX]');
   runner.argParser.addFlag('app-names-required',
       abbr: 'r',
       defaultsTo: false,
+      negatable: false,
       help:
-          'only execute the app names that are passed at runtime [env: TIECD_APP_NAMES_REQUIRED]');
+          'Only execute the app names that are passed at runtime [env: TIECD_APP_NAMES_REQUIRED]');
   runner.argParser.addFlag('ignore-errors',
       defaultsTo: false,
+      negatable: false,
       help:
-          'ignore errors keep processing other apps [env: TIECD_IGNORE_ERRORS]');
+          'Ignore errors keep processing other apps [env: TIECD_IGNORE_ERRORS]');
   runner.argParser.addFlag('verbose',
-      abbr: 'v', defaultsTo: false, help: 'increase logging to include all tracing and informational logging');
+      abbr: 'v',
+      defaultsTo: false,
+      negatable: false,
+      help:
+          'Increase logging to include all tracing and additional informational logging');
   runner.argParser.addFlag('trace-generated',
       defaultsTo: false,
-      help:
-          'output generated artifacts [env: TIECD_TRACE_GENERATED]');
-  runner.argParser.addFlag('trace-commands',
-      defaultsTo: false,
-      help:
-          'output executed commands [env: TIECD_TRACE_COMMANDS]');
+      help: 'Log generated artifacts [env: TIECD_TRACE_GENERATED]');
   runner.argParser.addFlag('trace-tie-file',
       defaultsTo: false,
-      help:
-      'output generated and expanded tie file [env: TIECD_TRACE_TIE_FILE]');
+      help: 'Log generated and expanded tie files [env: TIECD_TRACE_TIE_FILE]');
+  runner.argParser.addFlag('trace-commands',
+      defaultsTo: false,
+      help: 'Log executed commands [env: TIECD_TRACE_COMMANDS]');
   runner.argParser.addOption('secret-labels',
-      defaultsTo: 'password|secret|token|key|cert',
+      defaultsTo: 'pass|secret|token|key|cert',
       help:
-      'labels used to indicate secret values which will be redacted form conosle output [env: TIECD_SECRET_LABELS]');
+          'Labels used to indicate secret values which will be redacted form console output [env: TIECD_SECRET_LABELS]');
   runner.argParser.addFlag('banner',
       defaultsTo: true,
-      help:
-      'show TIECD banner header during execution [env: TIECD_BANNER]');
+      help: 'Show TIECD banner header during execution [env: TIECD_BANNER]');
   runner.argParser.addFlag('create-namespaces',
       defaultsTo: true,
       help:
-      'auto create namespaces if necessary [env: TIECD_CREATE_NAMESPACES]');
-
+          'Auto create namespaces if necessary [env: TIECD_CREATE_NAMESPACES]');
 
   runner
     ..addCommand(DeployCommand())

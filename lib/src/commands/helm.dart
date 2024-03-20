@@ -21,10 +21,10 @@ class HelmCommand {
     Directory("${_config.scratchDir}/$_tempDir").createSync(recursive: true);
   }
 
-  Future<void> addRepo(TieContext tieContext, HelmChart chart) async {
+  Future<void> addRepo(DeployContext deployContext, HelmChart chart) async {
     var args = ['repo','add', 'repo', (chart.url!)];
     Log.traceCommand(_config, 'helm', args);
-    var kubeProperties = Map.of(tieContext.getEnv());
+    var kubeProperties = Map.of(deployContext.getEnv());
     kubeProperties["KUBECONFIG"] = _kubeConfigFile;
     kubeProperties['HELM_CACHE_HOME'] = "${_config.scratchDir}/${_tempDir!}/cache";
     kubeProperties['HELM_CONFIG_HOME'] = "${_config.scratchDir}/${_tempDir!}/config";
@@ -33,19 +33,19 @@ class HelmCommand {
     var process = await Process.start('helm', args, environment: kubeProperties, runInShell: true);
     process.stdout
         .transform(utf8.decoder)
-        .forEach(print);
+        .forEach((line) {stdout.write(line);});
     process.stderr
         .transform(utf8.decoder)
-        .forEach(print);
+        .forEach((line) {stdout.write(line);});
     if (await process.exitCode != 0) {
       throw TieError('setting helm repo " + chart.url!');
     }
   }
 
-  Future<void> update(TieContext tieContext) async {
+  Future<void> update(DeployContext deployContext) async {
     var args = ['repo','update'];
     Log.traceCommand(_config, 'helm', args);
-    var kubeProperties = Map.of(tieContext.getEnv());
+    var kubeProperties = Map.of(deployContext.getEnv());
     kubeProperties["KUBECONFIG"] = _kubeConfigFile;
     kubeProperties['HELM_CACHE_HOME'] = "${_config.scratchDir}/${_tempDir!}/cache";
     kubeProperties['HELM_CONFIG_HOME'] = "${_config.scratchDir}/${_tempDir!}/config";
@@ -54,24 +54,24 @@ class HelmCommand {
     var process = await Process.start('helm', args, environment: kubeProperties, runInShell: true);
     process.stdout
         .transform(utf8.decoder)
-        .forEach(print);
+        .forEach((line) {stdout.write(line);});
     process.stderr
         .transform(utf8.decoder)
-        .forEach(print);
+        .forEach((line) {stdout.write(line);});
     if (await process.exitCode != 0) {
       throw TieError('helm repo update');
     }
   }
 
-  Future<void> install(TieContext tieContext, HelmChart helmChart) async {
+  Future<void> install(DeployContext deployContext, HelmChart helmChart) async {
     List<String> args = [];
     Map<String,String> fileMapping = {};
     args.add('upgrade');
 
     var name = helmChart.name;
     if (name == null) {
-      if (tieContext.app.label != null) {
-        name = tieContext.app.label;
+      if (deployContext.app.label != null) {
+        name = deployContext.app.label;
       }
     }
     args.add(name!);
@@ -83,10 +83,11 @@ class HelmCommand {
     args.add('--install');
     args.add('--wait');
     args.add('--history-max=1');
-    var namespace = findNamespace(tieContext);
+    var namespace = findNamespace(deployContext);
     if (namespace != null) {
       args.add("--namespace=$namespace");
     }
+
     if (helmChart.sets != null) {
       for (var setValue in helmChart.sets!) {
         args.add('--set');
@@ -127,7 +128,7 @@ class HelmCommand {
     if (_config.traceCommands) {
       var outputString = 'helm ';
       for (var arg in args) {
-        if (isPassword(arg)) {
+        if (isPassword(_config,arg)) {
           if (arg.contains('=')) {
              var parts = arg.split('=');
             outputString += '${parts[0]}=**** ';
@@ -144,7 +145,7 @@ class HelmCommand {
       Log.info(outputString);
     }
 
-    var kubeProperties = Map.of(tieContext.getEnv());
+    var kubeProperties = Map.of(deployContext.getEnv());
     kubeProperties["KUBECONFIG"] = _kubeConfigFile;
     kubeProperties['HELM_CACHE_HOME'] = "${_config.scratchDir}/${_tempDir!}/cache";
     kubeProperties['HELM_CONFIG_HOME'] = "${_config.scratchDir}/${_tempDir!}/config";
@@ -153,28 +154,28 @@ class HelmCommand {
     var process = await Process.start('helm', args, environment: kubeProperties, runInShell: true);
     process.stdout
         .transform(utf8.decoder)
-        .forEach(print);
+        .forEach((line) {stdout.write(line);});
     process.stderr
         .transform(utf8.decoder)
-        .forEach(print);
+        .forEach((line) {stdout.write(line);});
     if (await process.exitCode != 0) {
       throw TieError('helm install');
     }
 
   }
 
-  Future<void> remove(TieContext tieContext, HelmChart helmChart) async {
+  Future<void> remove(DeployContext deployContext, HelmChart helmChart) async {
     var name = helmChart.name;
-    if (name == null && tieContext.app.name != null) {
-      name = tieContext.app.name!;
+    if (name == null && deployContext.app.name != null) {
+      name = deployContext.app.name!;
     }
     var args = ['uninstall', '--wait', name!];
-    var namespace = findNamespace(tieContext);
+    var namespace = findNamespace(deployContext);
     if (namespace != null) {
       args.add('--namespace=$namespace');
     }
     Log.traceCommand(_config, 'helm', args);
-    var kubeProperties = Map.of(tieContext.getEnv());
+    var kubeProperties = Map.of(deployContext.getEnv());
     kubeProperties["KUBECONFIG"] = _kubeConfigFile;
     kubeProperties['HELM_CACHE_HOME'] = "${_config.scratchDir}/${_tempDir!}/cache";
     kubeProperties['HELM_CONFIG_HOME'] = "${_config.scratchDir}/${_tempDir!}/config";
@@ -183,16 +184,16 @@ class HelmCommand {
     var process = await Process.start('helm', args, environment: kubeProperties, runInShell: true);
     process.stdout
         .transform(utf8.decoder)
-        .forEach(print);
+        .forEach((line) {stdout.write(line);});
     process.stderr
         .transform(utf8.decoder)
-        .forEach(print);
+        .forEach((line) {stdout.write(line);});
     if (await process.exitCode != 0) {
       throw TieError('helm uninstall: $name');
     }
   }
 
-  void clean(TieContext tieContext, HelmChart chart) {
+  void clean(DeployContext deployContext, HelmChart chart) {
     try {
       if (File("${_config.scratchDir}/$_tempDir").existsSync()) {
           File("${_config.scratchDir}/$_tempDir").deleteSync(recursive: true);

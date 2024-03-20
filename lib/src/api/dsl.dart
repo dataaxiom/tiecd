@@ -121,7 +121,7 @@ enum Action { install, uninstall }
 class Image {
   String? name;
   String? version;
-  String? type;
+  ImageType? type;
   String? baseVersion;
   String? registry;
   ImageMode? imageMode;
@@ -194,19 +194,33 @@ class Volume {
   Map<String, dynamic> toJson() => _$VolumeToJson(this);
 }
 
-@JsonSerializable()
-class Command {
-  String? path;
-  List<String>? args;
+enum BuildType { maven, gradle, npm, yarn, pnpm }
+enum ImageType { springboot, jetty, karaf, tomcat, node, nginx }
 
-  Command();
-  factory Command.fromJson(Map json) => _$CommandFromJson(json);
-  Map<String, dynamic> toJson() => _$CommandToJson(this);
+@JsonSerializable()
+class ImageDefinition {
+
+  String? baseImage;
+  List<String>? ports;
+  String? author;
+
+  ImageDefinition();
+
+  factory ImageDefinition.fromJson(Map json) => _$ImageDefinitionFromJson(json);
+  Map<String, dynamic> toJson() => _$ImageDefinitionToJson(this);
+
 }
 
 @JsonSerializable()
 class Build {
+  BuildType? buildType;
   List<Coordinate>? artifacts;
+  List<String>? beforeScripts;
+  List<String>? scripts;
+  List<String>? afterScripts;
+
+  // image setup
+  ImageDefinition? imageDefinition;
 
   Build();
   factory Build.fromJson(Map json) => _$BuildFromJson(json);
@@ -218,9 +232,8 @@ class Deploy {
   Action? action;
   DeploymentMode? deploymentMode;
   List<MountFile>? mountFiles;
-  List<String>? templateFiles;
-  // environment variables available during deployment time
-  Map<String, String>? env;
+  List<String>? manifests; // file paths to file manifests
+  Map<String, String>? env; // environment variables available during deployment time
   List<String>? envPropertyFiles;
 
   List<String>? volumes;
@@ -230,14 +243,13 @@ class Deploy {
   List<String>? postApps;
   List<String>? errorApps;
 
-  // script to run pre/post
-  List<Command>? preCommands;
-  List<Command>? preDeployCommands;
-  List<Command>? postCommands;
-  List<Command>? errorCommands;
+  // script to run
+  List<String>? beforeScripts;
+  List<String>? scripts;
+  List<String>? afterScripts;
+  List<String>? errorScripts;
 
   String? namespace;
-
 
   Deploy();
   factory Deploy.fromJson(Map json) => _$DeployFromJson(json);
