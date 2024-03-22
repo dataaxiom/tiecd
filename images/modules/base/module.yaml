@@ -21,7 +21,7 @@ artifacts:
     path: "build/tiecd"
     dest: "/usr/bin"
   - name: "umoci-perm.sh"
-    path: "bin/umoci-perm.sh"
+    path: "build/umoci-perm.sh"
     dest: "/usr/bin"
   - name: "LICENSE"
     path: "build/LICENSE"
