@@ -246,7 +246,7 @@ class KubernetesProvider implements DeployProvider {
       if (image.path != null) {
         ImagePath imagePath = ImagePath(image.path!);
         skopeoCmd.initSourceRepo(deployContext.repositories, image.path!);
-        skopeoCmd.initTargetRepo(deployContext.environment.repository);
+        skopeoCmd.setTargetRepo(deployContext.environment.repository);
 
         var version = imagePath.version;
         if (version.isNotNullNorEmpty) {

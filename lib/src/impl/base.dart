@@ -21,7 +21,7 @@ abstract class BaseExecutor {
   bool fileSubset = false;
   final Set<String> _fileList = {};
   final Set<String> _appList = {};
-  int _numberOfApps = 0;  // for each processed file
+  int _numberOfApps = 0; // for each processed file
 
   BaseExecutor(this._config) {
     _projectProvider = buildProject();
@@ -195,7 +195,7 @@ abstract class BaseExecutor {
   void mergeFile(Tie tieFile, String yamlFile, Set<String> includedFiles) {
     // recursively process includes
     if (File('${_config.baseDir}/$yamlFile').existsSync()) {
-      Map<String,String> properties = {};
+      Map<String, String> properties = {};
 
       if (projectProvider != null) {
         if (projectProvider!.name.isNotNullNorEmpty) {
@@ -206,7 +206,8 @@ abstract class BaseExecutor {
         }
       }
 
-      var expandedFile = expandFileByName("${_config.baseDir}/$yamlFile",properties);
+      var expandedFile =
+          expandFileByName("${_config.baseDir}/$yamlFile", properties);
       if (expandedFile.isNullOrEmpty) {
         Log.info('${_config.baseDir}/$yamlFile is empty using defaults');
         expandedFile = '{}';
@@ -448,16 +449,12 @@ abstract class BaseExecutor {
 
   // Inject default repos - gitlab/github currently supported
   void expandImageRepos(Tie tieFile) {
-    Map<String, ImageRepository> reposByUrl = {};
-    Map<String, ImageRepository> reposByName = {};
+    Map<String, ImageRepository> reposByServer = {};
 
     if (tieFile.repositories != null && tieFile.repositories!.image != null) {
       for (ImageRepository repo in tieFile.repositories!.image!) {
-        if (repo.url.isNotNullNorEmpty) {
-          reposByUrl[repo.url!] = repo;
-        }
-        if (repo.name.isNotNullNorEmpty) {
-          reposByName[repo.name!] = repo;
+        if (repo.server.isNotNullNorEmpty) {
+          reposByServer[repo.server!] = repo;
         }
       }
     }
@@ -465,18 +462,15 @@ abstract class BaseExecutor {
     // add gitlab
     String? gitlabRepo = Platform.environment["CI_REGISTRY"];
     if (gitlabRepo.isNotNullNorEmpty) {
-      if (!reposByUrl.containsKey(gitlabRepo)) {
+      if (!reposByServer.containsKey(gitlabRepo)) {
         var gitlab = ImageRepository();
-        if (!reposByName.containsKey("gitlab")) {
-          gitlab.name = "gitlab";
-          gitlab.url = gitlabRepo;
-          gitlab.username = Platform.environment["CI_REGISTRY_USER"];
-          gitlab.password = Platform.environment["CI_JOB_TOKEN"];
-          // add it
-          tieFile.repositories ??= Repositories();
-          tieFile.repositories!.image ??= [];
-          tieFile.repositories!.image!.add(gitlab);
-        }
+        gitlab.server = gitlabRepo;
+        gitlab.username = Platform.environment["CI_REGISTRY_USER"];
+        gitlab.password = Platform.environment["CI_JOB_TOKEN"];
+        // add it
+        tieFile.repositories ??= Repositories();
+        tieFile.repositories!.image ??= [];
+        tieFile.repositories!.image!.add(gitlab);
       }
     }
 
@@ -488,18 +482,15 @@ abstract class BaseExecutor {
         githubActor.isNotNullNorEmpty &&
         githubToken.isNotNullNorEmpty) {
       String githubImage = 'ghcr.io/$githubRepository';
-      if (!reposByUrl.containsKey(githubImage)) {
+      if (!reposByServer.containsKey(githubImage)) {
         var gitlab = ImageRepository();
-        if (!reposByName.containsKey("github")) {
-          gitlab.name = "github";
-          gitlab.url = githubImage;
-          gitlab.username = githubActor;
-          gitlab.password = githubToken;
-          // add it
-          tieFile.repositories ??= Repositories();
-          tieFile.repositories!.image ??= [];
-          tieFile.repositories!.image!.add(gitlab);
-        }
+        gitlab.server = githubImage;
+        gitlab.username = githubActor;
+        gitlab.password = githubToken;
+        // add it
+        tieFile.repositories ??= Repositories();
+        tieFile.repositories!.image ??= [];
+        tieFile.repositories!.image!.add(gitlab);
       }
     }
 
@@ -522,11 +513,11 @@ abstract class BaseExecutor {
         expandImageRepos(tieFile);
 
         if (tieFile.apps == null) {
-
           if (projectProvider != null) {
             // generate the very minimum app - gets expanded in build/deploy
             var genApp = App();
-            if (projectProvider!= null && projectProvider!.name.isNotNullNorEmpty) {
+            if (projectProvider != null &&
+                projectProvider!.name.isNotNullNorEmpty) {
               genApp.name = projectProvider!.name;
             }
             tieFile.apps = [];

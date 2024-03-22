@@ -11,29 +11,27 @@ import '../util.dart';
 
 class SkopeoCommand {
   final Config _config;
-  
+
   String? sourceUsername;
   String? sourcePassword;
   String? sourceToken;
-  bool sourceTlsVerify = true;
+  bool? sourceTlsVerify;
   String? destinationUsername;
   String? destinationPassword;
   String? destinationToken;
-  bool destinationTlsVerify = true;
+  bool? destinationTlsVerify;
 
   SkopeoCommand(this._config);
 
   void reset() {
-    //  srcRepo = null;
     sourceUsername = null;
     sourcePassword = null;
     sourceToken = null;
-    sourceTlsVerify = true;
-    //  destRepo = null;
+    sourceTlsVerify = null;
     destinationUsername = null;
     destinationPassword = null;
     destinationToken = null;
-    destinationTlsVerify = true;
+    destinationTlsVerify = null;
   }
 
   void initSourceRepo(List<ImageRepository>? imageRepositories, String image) {
@@ -43,7 +41,7 @@ class SkopeoCommand {
       if (image.isNotNullNorEmpty) {
         ImagePath imagePath = ImagePath(image);
         for (var registry in imageRepositories) {
-          if (imagePath.host == registry.name) {
+          if (imagePath.host == registry.server) {
             imageRepository = registry;
             break;
           }
@@ -65,7 +63,25 @@ class SkopeoCommand {
     }
   }
 
-  void initTargetRepo(ImageRepository? imageRepository) {
+  void initTargetRepo(List<ImageRepository>? imageRepositories, String image) {
+    if (imageRepositories != null) {
+      ImageRepository? imageRepository;
+      if (image.isNotNullNorEmpty) {
+        ImagePath imagePath = ImagePath(image);
+        for (var registry in imageRepositories) {
+          if (imagePath.host == registry.server) {
+            imageRepository = registry;
+            break;
+          }
+        }
+      }
+      if (imageRepository != null) {
+        setTargetRepo(imageRepository);
+      }
+    }
+  }
+
+  void setTargetRepo(ImageRepository? imageRepository) {
     if (imageRepository != null) {
       if (imageRepository.username.isNotNullNorEmpty) {
         destinationUsername = imageRepository.username!;
@@ -91,7 +107,8 @@ class SkopeoCommand {
       args.add('--src-creds');
       args.add('$sourceUsername:$sourcePassword');
       outputString += ' --src-creds ****';
-    } else if (sourceUsername.isNotNullNorEmpty && sourceToken.isNotNullNorEmpty) {
+    } else if (sourceUsername.isNotNullNorEmpty &&
+        sourceToken.isNotNullNorEmpty) {
       args.add('--src-creds');
       args.add('$sourceUsername:$sourceToken');
       outputString += ' --src-creds ****';
@@ -100,16 +117,18 @@ class SkopeoCommand {
       args.add('token:$sourceToken');
       outputString += " --src-creds ****";
     }
-    if (sourceTlsVerify) {
+    if (sourceTlsVerify != null && sourceTlsVerify!) {
       args.add('--src-tls-verify');
       outputString += ' --src-tls-verify';
     }
 
-    if (destinationUsername.isNotNullNorEmpty && destinationPassword.isNotNullNorEmpty) {
+    if (destinationUsername.isNotNullNorEmpty &&
+        destinationPassword.isNotNullNorEmpty) {
       args.add('--dest-creds');
       args.add('$destinationUsername:$destinationPassword');
       outputString += ' --dest-creds ****';
-    } else if (destinationUsername.isNotNullNorEmpty && destinationToken.isNotNullNorEmpty) {
+    } else if (destinationUsername.isNotNullNorEmpty &&
+        destinationToken.isNotNullNorEmpty) {
       args.add('--dest-creds');
       args.add('$destinationUsername:$destinationToken');
       outputString += ' --dest-creds ****';
@@ -118,7 +137,7 @@ class SkopeoCommand {
       args.add('token:$destinationToken');
       outputString += ' --dest-creds token:$destinationToken';
     }
-    if (destinationTlsVerify) {
+    if (destinationTlsVerify != null && destinationTlsVerify == true) {
       args.add('--dest-tls-verify');
       outputString += ' --dest-tls-verify';
     }
@@ -154,7 +173,8 @@ class SkopeoCommand {
       args.add('--creds');
       args.add('$sourceUsername:$sourcePassword');
       outputString += ' --creds ****';
-    } else if (sourceUsername.isNotNullNorEmpty && sourceToken.isNotNullNorEmpty) {
+    } else if (sourceUsername.isNotNullNorEmpty &&
+        sourceToken.isNotNullNorEmpty) {
       args.add('--creds');
       args.add('$sourceUsername:$sourceToken');
       outputString += ' --creds ****';
@@ -164,7 +184,7 @@ class SkopeoCommand {
       outputString += " --creds ****";
     }
 
-    if (sourceTlsVerify) {
+    if (sourceTlsVerify != null && sourceTlsVerify!) {
       args.add('--tls-verify');
       outputString += ' --tls-verify';
     }
@@ -205,11 +225,13 @@ class SkopeoCommand {
       ];
       var outputString = 'skopeo copy';
       var imageUrl = ImagePath(sourceImage);
-      if (sourceUsername.isNotNullNorEmpty && sourcePassword.isNotNullNorEmpty) {
+      if (sourceUsername.isNotNullNorEmpty &&
+          sourcePassword.isNotNullNorEmpty) {
         args.add('--src-creds');
         args.add('$sourceUsername:$sourcePassword');
         outputString += ' --src-creds ****';
-      } else if (sourceUsername.isNotNullNorEmpty && sourceToken.isNotNullNorEmpty) {
+      } else if (sourceUsername.isNotNullNorEmpty &&
+          sourceToken.isNotNullNorEmpty) {
         args.add('--src-creds');
         args.add('$sourceUsername:$sourceToken');
         outputString += ' --src-creds ****';
@@ -218,7 +240,7 @@ class SkopeoCommand {
         args.add('token:$sourceToken');
         outputString += ' --src-creds token:$sourceToken';
       }
-      if (sourceTlsVerify) {
+      if (sourceTlsVerify != null && sourceTlsVerify!) {
         args.add('--src-tls-verify');
         outputString += ' --src-tls-verify';
       }
@@ -251,14 +273,15 @@ class SkopeoCommand {
     }
   }
 
-  Future<void> pushImageBuild(
-      TieContext tieContext, String sourceImage, String destinationImage) async {
+  Future<void> pushImageBuild(TieContext tieContext, String sourceImage,
+      String destinationImage) async {
     try {
       List<String> args = ['copy'];
       var outputString = 'skopeo copy';
       // does image have repo port
-      var imageUrl = ImagePath(destinationImage);
-      if (destinationUsername.isNotNullNorEmpty && destinationPassword.isNotNullNorEmpty) {
+print("rohan: ${destinationUsername!}");
+      if (destinationUsername.isNotNullNorEmpty &&
+          destinationPassword.isNotNullNorEmpty) {
         args.add('--dest-creds');
         args.add('$destinationUsername:$destinationPassword');
         outputString += ' --dest-creds ****';
@@ -272,7 +295,7 @@ class SkopeoCommand {
         args.add('token:$destinationToken');
         outputString += ' --dest-creds token:$destinationToken';
       }
-      if (destinationTlsVerify) {
+      if (destinationTlsVerify != null && sourceTlsVerify!) {
         args.add('--dest-tls-verify');
         outputString += ' --dest-tls-verify';
       }

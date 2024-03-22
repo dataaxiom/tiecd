@@ -159,9 +159,12 @@ class BuildExecutor extends BaseExecutor {
           ]);
 
           Log.info("pushing image to repo");
+          skopeo.reset();
+          skopeo.initTargetRepo(buildContext.repositories,app.image!.path!);
           await skopeo.pushImageBuild(buildContext, '$ociPath:tiecd',
               app.image!.path!);
         } catch (error) {
+          Log.error("got error building");
           rethrow;
         } finally {
           try {

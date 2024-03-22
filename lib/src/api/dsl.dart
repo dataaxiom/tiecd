@@ -18,8 +18,7 @@ enum ImageMode { push, pull }
 
 @JsonSerializable()
 class ImageRepository {
-  String? name;
-  String? url;
+  String? server;
   String? username;
   String? password;
   String? token;
