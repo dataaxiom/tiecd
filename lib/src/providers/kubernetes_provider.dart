@@ -212,7 +212,7 @@ class KubernetesProvider implements DeployProvider {
 
   @override
   String getDestinationImageName(Environment environment, Image image) {
-    return image.name!;
+    return image.path!;
   }
 
   String? buildNamespace(DeployContext deployContext, {String? namespace}) {
@@ -240,138 +240,60 @@ class KubernetesProvider implements DeployProvider {
 
   @override
   Future<void> processImage(DeployContext deployContext) async {
-    if (deployContext.app.images != null) {
+    if (deployContext.app.image != null) {
       var skopeoCmd = SkopeoCommand(_config);
-      var images = deployContext.app.images;
-      if (images != null) {
-        for (var image in images) {
-          ImageRepository? imageRepository;
-          if (deployContext.repositories.length == 1) {
-            imageRepository = deployContext.repositories[0];
-          } else if (deployContext.repositories.length > 1) {
-            // find the correct one
-            if (image.registry != null) {
-              for (var registry in deployContext.repositories) {
-                if (image.registry == registry.name) {
-                  imageRepository = registry;
-                  break;
-                }
-              }
-            } else {
-              // let's just use first repo by default
-              imageRepository = deployContext.repositories[0];
-            }
-          } else {
-            if (image.registry != null) {
-              throw TieError(
-                  'No valid image repo found for: ${image.registry}');
-            } else {
-              throw TieError('No valid image repo found');
-            }
-          }
+      var image = deployContext.app.image!;
+      if (image.path != null) {
+        ImagePath imagePath = ImagePath(image.path!);
+        skopeoCmd.initSourceRepo(deployContext.repositories, image.path!);
+        skopeoCmd.initTargetRepo(deployContext.environment.repository);
 
-          if (imageRepository != null) {
-            if (imageRepository.url.isNotNullNorEmpty) {
-              skopeoCmd.srcRepo = imageRepository.url;
-            } else {
-              throw TieError("Source image repo is empty");
-            }
-            if (imageRepository.username.isNotNullNorEmpty) {
-              skopeoCmd.srcUsername = imageRepository.username!;
-            }
-            if (imageRepository.password != null) {
-              skopeoCmd.srcPassword = imageRepository.password!;
-            } else if (imageRepository.token.isNotNullNorEmpty) {
-              skopeoCmd.srcToken = imageRepository.token!;
-            }
-            if (imageRepository.tlsVerify != null) {
-              skopeoCmd.srcTlsVerify = imageRepository.tlsVerify!;
-            }
-
-            if (deployContext.environment.repository != null) {
-              var destImageRepo = deployContext.environment.repository;
-              if (destImageRepo != null) {
-                if (destImageRepo.url != null) {
-                  skopeoCmd.destRepo = destImageRepo.url!;
-                } else {
-                  throw TieError(
-                      'Destination image repo url is empty in environment');
-                }
-                if (destImageRepo.username.isNotNullNorEmpty) {
-                  skopeoCmd.destUsername = destImageRepo.username!;
-                }
-                if (destImageRepo.password.isNotNullNorEmpty) {
-                  skopeoCmd.destPassword = destImageRepo.password!;
-                }
-                if (destImageRepo.token.isNotNullNorEmpty) {
-                  skopeoCmd.destToken = destImageRepo.token!;
-                }
-                if (destImageRepo.tlsVerify != null) {
-                  skopeoCmd.destTlsVerify = destImageRepo.tlsVerify!;
-                }
-              } else {
-                throw TieError(
-                    'No destination image repository specified in target environment');
-              }
-            }
-
-            if (image.name != null) {
-              var version = image.version;
-              version ??= "latest";
-              var imageName = "${image.name}:$version";
-              // image stream doesn't support sub paths
-              var destImageName =
-                  getDestinationImageName(deployContext.environment, image);
-              var fullDestImageName = "$destImageName:$version";
-
-              // get the sha for the image and setup deploy vars
-              var sha = await skopeoCmd.imageSha(imageName);
-
-              if (images.length == 1) {
-                deployContext.app.tiecdEnv!['TIECD_IMAGE_SHA'] = sha;
-                deployContext.app.tiecdEnv!['TIECD_IMAGE_NAME'] = destImageName;
-                deployContext.app.tiecdEnv!['TIECD_IMAGE_VERSION'] = version;
-                if (_config.verbose) {
-                  Log.info('adding TIECD_IMAGE_SHA to environment: $sha');
-                  Log.info(
-                      'adding TIECD_IMAGE_NAME to environment: $destImageName');
-                  Log.info(
-                      'adding TIECD_IMAGE_VERSION to environment: $version');
-                }
-                var envImageName = image.name!
-                    .toUpperCase()
-                    .replaceAll('-', "_")
-                    .replaceAll('/', '_');
-                deployContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_SHA'] =
-                    sha;
-                deployContext
-                        .app.tiecdEnv!['TIECD_IMAGE_${envImageName}_NAME'] =
-                    destImageName;
-                deployContext.app
-                    .tiecdEnv!['TIECD_IMAGE_${envImageName}_VERSION'] = version;
-
-                if (_config.verbose) {
-                  Log.info(
-                      'adding TIECD_IMAGE_${envImageName}_SHA to environment: $sha');
-                  Log.info(
-                      'adding TIECD_IMAGE_${envImageName}_NAME to environment: $destImageName');
-                  Log.info(
-                      'adding TIECD_IMAGE_${envImageName}_VERSION to environment: $version');
-                }
-
-                // push the image if setup
-                if (deployContext.environment.repository?.mode ==
-                    ImageMode.push) {
-                  await skopeoCmd.deployImage(imageName, fullDestImageName);
-                }
-              }
-            } else {
-              throw TieError('image name can not be null');
-            }
-          } else {
-            throw TieError('Source image registry is missing');
-          }
+        var version = imagePath.version;
+        if (version.isNotNullNorEmpty) {
+          version = "latest";
         }
+        var imageName = "${imagePath.name}:$version";
+        // image stream doesn't support sub paths
+        var destImageName =
+            getDestinationImageName(deployContext.environment, image);
+        var fullDestImageName = "$destImageName:$version";
+
+        // get the sha for the image and setup deploy vars
+        var sha = await skopeoCmd.imageSha(image.path!);
+
+        deployContext.app.tiecdEnv!['TIECD_IMAGE_SHA'] = sha;
+        deployContext.app.tiecdEnv!['TIECD_IMAGE_NAME'] = imagePath.name;
+        deployContext.app.tiecdEnv!['TIECD_IMAGE_VERSION'] = version;
+        if (_config.verbose) {
+          Log.info('adding TIECD_IMAGE_SHA to environment: $sha');
+          Log.info('adding TIECD_IMAGE_NAME to environment: ${imagePath.name}');
+          Log.info('adding TIECD_IMAGE_VERSION to environment: $version');
+        }
+        var envImageName = imagePath.name
+            .toUpperCase()
+            .replaceAll('-', "_")
+            .replaceAll('/', '_');
+        deployContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_SHA'] = sha;
+        deployContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_NAME'] =
+            imagePath.name;
+        deployContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_VERSION'] =
+            version;
+
+        if (_config.verbose) {
+          Log.info(
+              'adding TIECD_IMAGE_${envImageName}_SHA to environment: $sha');
+          Log.info(
+              'adding TIECD_IMAGE_${envImageName}_NAME to environment: ${imagePath.name}');
+          Log.info(
+              'adding TIECD_IMAGE_${envImageName}_VERSION to environment: $version');
+        }
+
+        // push the image if setup
+        if (deployContext.environment.repository?.mode == ImageMode.push) {
+          await skopeoCmd.deployImage(image.path!, fullDestImageName);
+        }
+      } else {
+        throw TieError('Image path is missing');
       }
     }
     // else just skip over processing
@@ -408,7 +330,7 @@ class KubernetesProvider implements DeployProvider {
   @override
   Future<void> processConfig(DeployContext deployContext) async {
     if (deployContext.app.deploy!.mountFiles != null) {
-      StringBuffer cksum = StringBuffer();
+      StringBuffer checksum = StringBuffer();
       for (var mountFile in deployContext.app.deploy!.mountFiles!) {
         if (mountFile.file != null &&
             File("${_config.baseDir}/${mountFile.file}").existsSync()) {
@@ -449,7 +371,7 @@ class KubernetesProvider implements DeployProvider {
           var namespace = buildNamespace(deployContext);
 
           // apply the manifest and save the cksum hash
-          cksum.write(await kubectl.applyManifestByValue(mountFile.file!,
+          checksum.write(await kubectl.applyManifestByValue(mountFile.file!,
               json2yaml(configMap), deployContext.getEnv(), namespace));
         } else {
           if (mountFile.file == null) {
@@ -460,7 +382,7 @@ class KubernetesProvider implements DeployProvider {
         }
       }
       // calc total config checksum
-      var bytes = utf8.encode(cksum.toString());
+      var bytes = utf8.encode(checksum.toString());
       var digest = md5.convert(bytes);
       deployContext.app.tiecdEnv!['TIECD_CONFIG_HASH'] = digest.toString();
       Log.info('adding TIECD_CONFIG_HASH to environment: $digest');

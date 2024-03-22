@@ -8,26 +8,33 @@ import 'package:yaml/yaml.dart';
 import 'package:checked_yaml/checked_yaml.dart';
 
 import '../api/dsl.dart';
+import '../api/provider.dart';
 import '../api/types.dart';
 import '../log.dart';
 import '../project/factory.dart';
-import '../project/nextjs.dart';
 import '../util.dart';
 
 abstract class BaseExecutor {
   final Config _config;
   final _date = DateTime.now();
+  ProjectProvider? _projectProvider;
   bool fileSubset = false;
   final Set<String> _fileList = {};
   final Set<String> _appList = {};
+  int _numberOfApps = 0;  // for each processed file
 
-  BaseExecutor(this._config);
+  BaseExecutor(this._config) {
+    _projectProvider = buildProject();
+  }
 
   @protected
   Config get config => _config;
   @protected
   DateTime get date => _date;
-
+  @protected
+  int get numberOfApps => _numberOfApps;
+  @protected
+  ProjectProvider? get projectProvider => _projectProvider;
 
   String getVerb() {
     return '';
@@ -188,7 +195,18 @@ abstract class BaseExecutor {
   void mergeFile(Tie tieFile, String yamlFile, Set<String> includedFiles) {
     // recursively process includes
     if (File('${_config.baseDir}/$yamlFile').existsSync()) {
-      var expandedFile = expandFileByName("${_config.baseDir}/$yamlFile");
+      Map<String,String> properties = {};
+
+      if (projectProvider != null) {
+        if (projectProvider!.name.isNotNullNorEmpty) {
+          properties['TIECD_PROJECT_NAME'] = projectProvider!.name!;
+        }
+        if (projectProvider!.version.isNotNullNorEmpty) {
+          properties['TIECD_PROJECT_VERSION'] = projectProvider!.version!;
+        }
+      }
+
+      var expandedFile = expandFileByName("${_config.baseDir}/$yamlFile",properties);
       if (expandedFile.isNullOrEmpty) {
         Log.info('${_config.baseDir}/$yamlFile is empty using defaults');
         expandedFile = '{}';
@@ -290,12 +308,7 @@ abstract class BaseExecutor {
               app.deploy!.namespace = includeApp.deploy!.namespace;
             }
 
-            if (includeApp.images != null) {
-              app.images ??= [];
-              for (var image in includeApp.images!) {
-                app.images!.add(image);
-              }
-            }
+            app.image ??= includeApp.image;
 
             if (app.deploy!.deploymentMode == null &&
                 includeApp.deploy!.deploymentMode != null) {
@@ -420,6 +433,19 @@ abstract class BaseExecutor {
     print('---');
   }
 
+  void printArray(String name, String? message, Map contents) {
+    if (message.isNotNullNorEmpty) {
+      Log.info(message!);
+    }
+    print('---');
+    List<Map> array = [contents];
+    Map<String, dynamic> wrapper = {};
+    wrapper[name] = array;
+    sanitizeDoc(config, wrapper);
+    print(json2yaml(wrapper));
+    print('---');
+  }
+
   // Inject default repos - gitlab/github currently supported
   void expandImageRepos(Tie tieFile) {
     Map<String, ImageRepository> reposByUrl = {};
@@ -497,19 +523,19 @@ abstract class BaseExecutor {
 
         if (tieFile.apps == null) {
 
-          // lets see if we can auto generate an app
-          var project = buildProject();
-
-          if (project != null) {
+          if (projectProvider != null) {
             // generate the very minimum app - gets expanded in build/deploy
             var genApp = App();
-            genApp.name = project.name;
+            if (projectProvider!= null && projectProvider!.name.isNotNullNorEmpty) {
+              genApp.name = projectProvider!.name;
+            }
             tieFile.apps = [];
             tieFile.apps!.add(genApp);
           }
         }
 
         if (tieFile.apps != null) {
+          _numberOfApps = tieFile.apps!.length;
           for (var app in tieFile.apps!) {
             try {
               // check we have a container name

@@ -8,16 +8,7 @@ import '../api/dsl.dart';
 import '../api/provider.dart';
 import '../commands/umoci.dart';
 
-class JavaProject implements ProjectProvider {
-
-  @override
-  BuildType? buildType;
-
-  @override
-  String? name;
-
-  @override
-  String? version;
+class JavaProject extends ProjectProvider {
 
   bool _isJava = false;
   String? _sourceJdkVersion;
@@ -202,4 +193,5 @@ class JavaProject implements ProjectProvider {
   List<String> getUmociOptions() {
     return [];
   }
+
 }

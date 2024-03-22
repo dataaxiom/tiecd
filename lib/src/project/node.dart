@@ -8,16 +8,7 @@ import 'package:tiecd/src/extensions.dart';
 import '../api/provider.dart';
 import '../api/types.dart';
 
-class NodeProject implements ProjectProvider {
-
-  @override
-  BuildType? buildType;
-
-  @override
-  String? name;
-
-  @override
-  String? version;
+class NodeProject extends ProjectProvider {
 
   bool _isNode = false;
 
@@ -90,4 +81,5 @@ class NodeProject implements ProjectProvider {
   List<String> getUmociOptions() {
     return [];
   }
+
 }

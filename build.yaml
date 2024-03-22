@@ -11,4 +11,3 @@ targets:
           checked: true
           explicit_to_json: true
           include_if_null: false
-

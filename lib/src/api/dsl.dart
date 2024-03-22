@@ -119,11 +119,8 @@ enum Action { install, uninstall }
 
 @JsonSerializable()
 class Image {
-  String? name;
-  String? version;
+  String? path;
   ImageType? type;
-  String? baseVersion;
-  String? registry;
   ImageMode? imageMode;
 
   Image();
@@ -195,12 +192,12 @@ class Volume {
 }
 
 enum BuildType { maven, gradle, npm, yarn, pnpm }
-enum ImageType { springboot, jetty, karaf, tomcat, node, nginx }
+enum ImageType { plain, springboot, jetty, karaf, tomcat, node, nginx }
 
 @JsonSerializable()
 class ImageDefinition {
 
-  String? baseImage;
+  String? from;
   List<String>? ports;
   String? author;
 
@@ -256,14 +253,14 @@ class Deploy {
   Map<String, dynamic> toJson() => _$DeployToJson(this);
 }
 
-@JsonSerializable()
+@JsonSerializable(createToJson: true)
 class App {
   String? name;
   String? label;
   bool? autoRun;
   List<String>? includes;
   String? dependsOn;
-  List<Image>? images;
+  Image? image;
   // environment variables applied during tiecd runtime execution
   Map<String,String>? tiecdEnv;
   List<String>? tiecdEnvPropertyFiles;
@@ -273,7 +270,7 @@ class App {
   Deploy? deploy;
 
   App();
-  factory App.fromJson(Map json) => _$AppFromJson(json);
+  factory App.fromJson(Map json) => _$TieAppFromJson(json);
   Map<String, dynamic> toJson() => _$AppToJson(this);
 }
 
@@ -291,3 +288,46 @@ class Tie {
   factory Tie.fromJson(Map json) => _$TieFromJson(json);
   Map<String, dynamic> toJson() => _$TieToJson(this);
 }
+
+
+// custom app override to support nullable image only
+// manually update when app definition changes
+// supports image tag having no values
+
+App _$TieAppFromJson(Map json) => $checkedCreate(
+  'App',
+  json,
+      ($checkedConvert) {
+    final val = App();
+    $checkedConvert('name', (v) => val.name = v as String?);
+    $checkedConvert('label', (v) => val.label = v as String?);
+    $checkedConvert('autoRun', (v) => val.autoRun = v as bool?);
+    $checkedConvert(
+        'includes',
+            (v) => val.includes =
+            (v as List<dynamic>?)?.map((e) => e as String).toList());
+    $checkedConvert('dependsOn', (v) => val.dependsOn = v as String?);
+
+    // tiecd
+    if (json.containsKey("image")) {
+      $checkedConvert('image',
+              (v) =>
+          val.image = v == null ? Image() : Image.fromJson(v as Map));
+    }
+    $checkedConvert(
+        'tiecdEnv',
+            (v) => val.tiecdEnv = (v as Map?)?.map(
+              (k, e) => MapEntry(k as String, e as String),
+        ));
+    $checkedConvert(
+        'tiecdEnvPropertyFiles',
+            (v) => val.tiecdEnvPropertyFiles =
+            (v as List<dynamic>?)?.map((e) => e as String).toList());
+    $checkedConvert('comment', (v) => val.comment = v as String?);
+    $checkedConvert('build',
+            (v) => val.build = v == null ? null : Build.fromJson(v as Map));
+    $checkedConvert('deploy',
+            (v) => val.deploy = v == null ? null : Deploy.fromJson(v as Map));
+    return val;
+  },
+);

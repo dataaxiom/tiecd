@@ -108,14 +108,14 @@ String expandFileByContents(String value, String fileExtension) {
   return expandFileByContentsWithProperties(value, fileExtension, null);
 }
 
-String expandFileByName(String filename) {
+String expandFileByName(String filename, Map<String,String>? properties) {
   var builder = '';
   var value = File(filename).readAsStringSync();
   var extension = '';
   if (filename.contains('.')) {
     extension = filename.substring(filename.lastIndexOf('.') + 1);
   }
-  builder = expandFileByContentsWithProperties(value, extension, null);
+  builder = expandFileByContentsWithProperties(value, extension, properties);
   return builder.toString();
 }
 
@@ -233,5 +233,47 @@ Future<void> runScript(TieContext tieContext, String script, {Map<String,String>
   process.stderr.transform(utf8.decoder).forEach((line) {stdout.write(line);});
   if (await process.exitCode != 0) {
     throw TieError('running command: $script');
+  }
+}
+
+// url could be different formats
+// node:20-alpine
+// bitnami/postgresql:latest
+// registry.gitlab.com/dataaxiom/node:20-alpine
+class ImagePath {
+  String host = '';
+  String path = '';
+  String name = '';
+  String version = '';
+
+  ImagePath(String url) {
+    List<String> parts = url.split('/');
+    if (parts.length > 1) {
+      if (parts[0].contains('.')) {
+        // we assume first part is hostname
+        host = parts[0];
+        initVersion(url.substring(host.length+1));
+      } else {
+        initVersion(url);
+      }
+    } else {
+      initVersion(url);
+    }
+  }
+
+  void initVersion(String image) {
+    List<String> parts = image.split(':');
+    if (parts.length == 2) {
+      path = parts[0];
+      version = parts[1];
+    } else {
+      path = image;
+      version = 'latest';
+    }
+    if (path.contains('/')) {
+      name = path.substring(path.lastIndexOf('/')+1);
+    } else {
+      name = path;
+    }
   }
 }

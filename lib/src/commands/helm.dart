@@ -98,7 +98,7 @@ class HelmCommand {
     if (helmChart.values != null) {
       for (var valueFile in helmChart.values!) {
         // expand the file into a temporary file
-        var expanded = expandFileByName("${_config.baseDir}/$valueFile");
+        var expanded = expandFileByName("${_config.baseDir}/$valueFile",null);
         var fileName = valueFile.replaceAll("/","-");
         fileName = "${_config.scratchDir}/${_tempDir!}/$fileName";
         File(fileName).writeAsStringSync(expanded);

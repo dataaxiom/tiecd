@@ -126,7 +126,7 @@ class DeployExecutor extends BaseExecutor {
         }
 
         if (config.traceTieFile) {
-          printObject('app', null, app.toJson());
+          printArray('apps', null, app.toJson());
         }
 
         try {

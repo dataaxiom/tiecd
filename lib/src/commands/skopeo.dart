@@ -7,258 +7,228 @@ import 'package:tiecd/src/extensions.dart';
 import '../api/dsl.dart';
 import '../api/types.dart';
 import '../log.dart';
-
-
-// url could be different formats
-// node:20-alpine
-// bitnami/postgresql:latest
-// registry.gitlab.com/dataaxiom/node:20-alpine
-class ImageUrl {
-  String host = '';
-  String path = '';
-  String version = '';
-
-  ImageUrl(String url) {
-    List<String> parts = url.split('/');
-    if (parts.length > 1) {
-      if (parts[0].contains('.')) {
-        // we assume first part is hostname
-        host = parts[0];
-        initVersion(url.substring(host.length+1));
-      } else {
-        initVersion(url);
-      }
-    } else {
-      initVersion(url);
-    }
-  }
-
-  void initVersion(String image) {
-    List<String> parts = image.split(':');
-    if (parts.length == 2) {
-      path = parts[0];
-      version = parts[1];
-    } else {
-      path = image;
-      version = 'latest';
-    }
-  }
-}
+import '../util.dart';
 
 class SkopeoCommand {
   final Config _config;
-
-  String? srcRepo;
-  String? srcUsername;
-  String? srcPassword;
-  String? srcToken;
-  bool srcTlsVerify = true;
-  String? destRepo;
-  String? destUsername;
-  String? destPassword;
-  String? destToken;
-  bool destTlsVerify = true;
+  
+  String? sourceUsername;
+  String? sourcePassword;
+  String? sourceToken;
+  bool sourceTlsVerify = true;
+  String? destinationUsername;
+  String? destinationPassword;
+  String? destinationToken;
+  bool destinationTlsVerify = true;
 
   SkopeoCommand(this._config);
 
-  Future<void> deployImage(String srcImage, String destImage) async {
+  void reset() {
+    //  srcRepo = null;
+    sourceUsername = null;
+    sourcePassword = null;
+    sourceToken = null;
+    sourceTlsVerify = true;
+    //  destRepo = null;
+    destinationUsername = null;
+    destinationPassword = null;
+    destinationToken = null;
+    destinationTlsVerify = true;
+  }
+
+  void initSourceRepo(List<ImageRepository>? imageRepositories, String image) {
+    // check if there is a repository matching the host - setup the auth
+    if (imageRepositories != null) {
+      ImageRepository? imageRepository;
+      if (image.isNotNullNorEmpty) {
+        ImagePath imagePath = ImagePath(image);
+        for (var registry in imageRepositories) {
+          if (imagePath.host == registry.name) {
+            imageRepository = registry;
+            break;
+          }
+        }
+      }
+      if (imageRepository != null) {
+        if (imageRepository.username.isNotNullNorEmpty) {
+          sourceUsername = imageRepository.username!;
+        }
+        if (imageRepository.password != null) {
+          sourcePassword = imageRepository.password!;
+        } else if (imageRepository.token.isNotNullNorEmpty) {
+          sourceToken = imageRepository.token!;
+        }
+        if (imageRepository.tlsVerify != null) {
+          sourceTlsVerify = imageRepository.tlsVerify!;
+        }
+      }
+    }
+  }
+
+  void initTargetRepo(ImageRepository? imageRepository) {
+    if (imageRepository != null) {
+      if (imageRepository.username.isNotNullNorEmpty) {
+        destinationUsername = imageRepository.username!;
+      }
+      if (imageRepository.password.isNotNullNorEmpty) {
+        destinationPassword = imageRepository.password!;
+      }
+      if (imageRepository.token.isNotNullNorEmpty) {
+        destinationToken = imageRepository.token!;
+      }
+      if (imageRepository.tlsVerify != null) {
+        destinationTlsVerify = imageRepository.tlsVerify!;
+      }
+    }
+  }
+
+  Future<void> deployImage(String sourceImage, String destinationImage) async {
     List<String> args = [];
     args.add('copy');
     var outputString = 'skopeo copy';
-    if (srcRepo.isNotNullNorEmpty) {
-      if (destRepo.isNotNullNorEmpty) {
-        if (srcUsername.isNotNullNorEmpty && srcPassword.isNotNullNorEmpty) {
-          args.add('--src-creds');
-          args.add('$srcUsername:$srcPassword');
-          outputString += ' --src-creds ****';
-        } else if (srcUsername.isNotNullNorEmpty && srcToken.isNotNullNorEmpty) {
-          args.add('--src-creds');
-          args.add('$srcUsername:$srcToken');
-          outputString += ' --src-creds ****';
-        } else if (srcToken.isNotNullNorEmpty) {
-          args.add('--src-creds');
-          args.add('token:$srcToken');
-          outputString += " --src-creds ****";
-        }
-        if (srcTlsVerify) {
-          args.add('--src-tls-verify');
-          outputString += ' --src-tls-verify';
-        }
 
-        if (destUsername.isNotNullNorEmpty && destPassword.isNotNullNorEmpty) {
-          args.add('--dest-creds');
-          args.add('$destUsername:$destPassword');
-          outputString += ' --dest-creds ****';
-        } else if (destUsername.isNotNullNorEmpty && destToken.isNotNullNorEmpty) {
-          args.add('--dest-creds');
-          args.add('$destUsername:$destToken');
-          outputString += ' --dest-creds ****';
-        } else if (destToken.isNotNullNorEmpty) {
-          args.add('--dest-creds');
-          args.add('token:$destToken');
-          outputString += ' --dest-creds token:$destToken';
-        }
-        if (destTlsVerify) {
-          args.add('--dest-tls-verify');
-          outputString += ' --dest-tls-verify';
-        }
+    if (sourceUsername.isNotNullNorEmpty && sourcePassword.isNotNullNorEmpty) {
+      args.add('--src-creds');
+      args.add('$sourceUsername:$sourcePassword');
+      outputString += ' --src-creds ****';
+    } else if (sourceUsername.isNotNullNorEmpty && sourceToken.isNotNullNorEmpty) {
+      args.add('--src-creds');
+      args.add('$sourceUsername:$sourceToken');
+      outputString += ' --src-creds ****';
+    } else if (sourceToken.isNotNullNorEmpty) {
+      args.add('--src-creds');
+      args.add('token:$sourceToken');
+      outputString += " --src-creds ****";
+    }
+    if (sourceTlsVerify) {
+      args.add('--src-tls-verify');
+      outputString += ' --src-tls-verify';
+    }
 
-        // strip srcRepo if the image name is in it already
-        srcRepo = sanitizeRepo(srcRepo!);
-        destRepo = sanitizeRepo(destRepo!);
+    if (destinationUsername.isNotNullNorEmpty && destinationPassword.isNotNullNorEmpty) {
+      args.add('--dest-creds');
+      args.add('$destinationUsername:$destinationPassword');
+      outputString += ' --dest-creds ****';
+    } else if (destinationUsername.isNotNullNorEmpty && destinationToken.isNotNullNorEmpty) {
+      args.add('--dest-creds');
+      args.add('$destinationUsername:$destinationToken');
+      outputString += ' --dest-creds ****';
+    } else if (destinationToken.isNotNullNorEmpty) {
+      args.add('--dest-creds');
+      args.add('token:$destinationToken');
+      outputString += ' --dest-creds token:$destinationToken';
+    }
+    if (destinationTlsVerify) {
+      args.add('--dest-tls-verify');
+      outputString += ' --dest-tls-verify';
+    }
 
-        // strip duplicate parts (gitlab contains group/project name in repo)
-        var projectName = srcImage.substring(0, srcImage.indexOf(":"));
-        if (projectName.contains("/")) {
-          projectName = projectName.substring(0, projectName.lastIndexOf("/"));
-        }
-        if (srcRepo!.endsWith(projectName)) {
-          srcRepo =
-              srcRepo!.substring(0, srcRepo!.lastIndexOf(projectName) - 1);
-        }
+    args.add('docker://$sourceImage');
+    outputString += ' docker://$sourceImage';
+    args.add('docker://$destinationImage');
+    outputString += ' docker://$destinationImage';
 
-        args.add('docker://$srcRepo/$srcImage');
-        outputString += ' docker://$srcRepo/$srcImage';
-        args.add('docker://$destRepo/$destImage');
-        outputString += ' docker://$destRepo/$destImage';
+    if (_config.traceCommands) {
+      Log.info(outputString);
+    }
 
-        if (_config.traceCommands) {
-          Log.info(outputString);
-        }
-
-        var process = await Process.start('skopeo', args, runInShell: true);
-        process.stdout.transform(utf8.decoder).forEach((line) {stdout.write(line);});
-        process.stderr.transform(utf8.decoder).forEach((line) {stdout.write(line);});
-        if (await process.exitCode != 0) {
-          throw TieError('copying image $srcImage to $destImage');
-        }
-      } else {
-        throw TieError('destRepo can\'t be empty');
-      }
-    } else {
-      throw TieError('srcRepo can\'t be empty');
+    var process = await Process.start('skopeo', args, runInShell: true);
+    process.stdout.transform(utf8.decoder).forEach((line) {
+      stdout.write(line);
+    });
+    process.stderr.transform(utf8.decoder).forEach((line) {
+      stdout.write(line);
+    });
+    if (await process.exitCode != 0) {
+      throw TieError('copying image $sourceImage to $destinationImage');
     }
   }
 
-  String sanitizeRepo(String url) {
-    var value = url.replaceFirst('https://', '');
-    value = value.replaceFirst('http://', '');
-    if (value.endsWith('/')) {
-      value = value.substring(0, value.length);
-    }
-    return value;
-  }
-
-  Future<String> imageSha(String srcImage) async {
+  Future<String> imageSha(String sourceImage) async {
     var sha = '';
     List<String> args = [];
     args.add('inspect');
     var outputString = 'skopeo inspect';
-    if (srcRepo.isNotNullNorEmpty) {
-      if (srcUsername.isNotNullNorEmpty && srcPassword.isNotNullNorEmpty) {
-        args.add('--creds');
-        args.add('$srcUsername:$srcPassword');
-        outputString += ' --creds ****';
-      } else if (srcUsername.isNotNullNorEmpty && srcToken.isNotNullNorEmpty) {
-        args.add('--creds');
-        args.add('$srcUsername:$srcToken');
-        outputString += ' --creds ****';
-      } else if (srcToken.isNotNullNorEmpty) {
-        args.add('--creds');
-        args.add('token:$srcToken');
-        outputString += " --creds ****";
-      }
 
-      if (srcTlsVerify) {
-        args.add('--tls-verify');
-        outputString += ' --tls-verify';
-      }
-
-      args.add('--format');
-      args.add('{{.Digest}}');
-      outputString += ' --format {{.Digest}}';
-
-      // strip srcRepo if the image name is in it already
-      srcRepo = sanitizeRepo(srcRepo!);
-
-      // strip duplicate parts (gitlab contains group/project name in repo)
-      var projectName = srcImage.substring(0, srcImage.indexOf(':'));
-      if (projectName.contains('/')) {
-        projectName = projectName.substring(0, projectName.lastIndexOf('/'));
-      }
-      if (srcRepo!.endsWith(projectName)) {
-        srcRepo = srcRepo!.substring(0, srcRepo!.lastIndexOf(projectName) - 1);
-      }
-
-      args.add('docker://$srcRepo/$srcImage');
-      outputString += ' docker://$srcRepo/$srcImage';
-
-      if (_config.traceCommands) {
-        Log.info(outputString);
-      }
-
-      var process = await Process.start('skopeo', args, runInShell: true);
-      if (await process.exitCode != 0) {
-        process.stdout.transform(utf8.decoder).forEach((line) {stdout.write(line);});
-        process.stderr.transform(utf8.decoder).forEach((line) {stdout.write(line);});
-        throw TieError('skopeo inspect image $srcImage failed');
-      } else {
-        sha = await process.stdout.transform(utf8.decoder).join();
-        sha = sha.replaceAll('\n', '');
-      }
-    } else {
-      throw TieError('srcRepo can\'t be empty');
+    if (sourceUsername.isNotNullNorEmpty && sourcePassword.isNotNullNorEmpty) {
+      args.add('--creds');
+      args.add('$sourceUsername:$sourcePassword');
+      outputString += ' --creds ****';
+    } else if (sourceUsername.isNotNullNorEmpty && sourceToken.isNotNullNorEmpty) {
+      args.add('--creds');
+      args.add('$sourceUsername:$sourceToken');
+      outputString += ' --creds ****';
+    } else if (sourceToken.isNotNullNorEmpty) {
+      args.add('--creds');
+      args.add('token:$sourceToken');
+      outputString += " --creds ****";
     }
+
+    if (sourceTlsVerify) {
+      args.add('--tls-verify');
+      outputString += ' --tls-verify';
+    }
+
+    args.add('--format');
+    args.add('{{.Digest}}');
+    outputString += ' --format {{.Digest}}';
+
+    args.add('docker://$sourceImage');
+    outputString += ' docker://$sourceImage';
+
+    if (_config.traceCommands) {
+      Log.info(outputString);
+    }
+
+    var process = await Process.start('skopeo', args, runInShell: true);
+    if (await process.exitCode != 0) {
+      process.stdout.transform(utf8.decoder).forEach((line) {
+        stdout.write(line);
+      });
+      process.stderr.transform(utf8.decoder).forEach((line) {
+        stdout.write(line);
+      });
+      throw TieError('skopeo inspect image $sourceImage failed');
+    } else {
+      sha = await process.stdout.transform(utf8.decoder).join();
+      sha = sha.replaceAll('\n', '');
+    }
+
     return sha;
   }
 
   // used to pull images for building  - saves locally as oci image
-  Future<void> pullImageForBuild(TieContext tieContext, String image) async {
+  Future<void> pullImageForBuild(String sourceImage) async {
     try {
-
-      List<String> args = ['copy',];
+      List<String> args = [
+        'copy',
+      ];
       var outputString = 'skopeo copy';
-
-      // does image have repo port
-      var imageUrl = ImageUrl(image);
-      if (imageUrl.host.isNotNullNorEmpty) {
-        // assume we have registry part so check if we have one setup for auth
-        ImageRepository imageRepository;
-        for (var repo in tieContext.repositories) {
-          if (imageUrl.host == repo.url) {
-            srcRepo = repo.url;
-            srcUsername = repo.username;
-            srcPassword = repo.password;
-            srcToken = repo.token;
-            if (repo.tlsVerify != null) {
-              srcTlsVerify = repo.tlsVerify!;
-            }
-
-            if (srcUsername.isNotNullNorEmpty && srcPassword.isNotNullNorEmpty) {
-              args.add('--src-creds');
-              args.add('$srcUsername:$srcPassword');
-              outputString += ' --src-creds ****';
-            } else if (srcUsername.isNotNullNorEmpty && srcToken.isNotNullNorEmpty) {
-              args.add('--src-creds');
-              args.add('$srcUsername:$srcToken');
-              outputString += ' --src-creds ****';
-            } else if (srcToken.isNotNullNorEmpty) {
-              args.add('--src-creds');
-              args.add('token:$srcToken');
-              outputString += ' --src-creds token:$srcToken';
-            }
-            if (srcTlsVerify) {
-              args.add('--src-tls-verify');
-              outputString += ' --src-tls-verify';
-            }
-          }
-        }
+      var imageUrl = ImagePath(sourceImage);
+      if (sourceUsername.isNotNullNorEmpty && sourcePassword.isNotNullNorEmpty) {
+        args.add('--src-creds');
+        args.add('$sourceUsername:$sourcePassword');
+        outputString += ' --src-creds ****';
+      } else if (sourceUsername.isNotNullNorEmpty && sourceToken.isNotNullNorEmpty) {
+        args.add('--src-creds');
+        args.add('$sourceUsername:$sourceToken');
+        outputString += ' --src-creds ****';
+      } else if (sourceToken.isNotNullNorEmpty) {
+        args.add('--src-creds');
+        args.add('token:$sourceToken');
+        outputString += ' --src-creds token:$sourceToken';
       }
-      args.add('docker://$image');
-      outputString += ' docker://$image';
+      if (sourceTlsVerify) {
+        args.add('--src-tls-verify');
+        outputString += ' --src-tls-verify';
+      }
+      args.add('docker://$sourceImage');
+      outputString += ' docker://$sourceImage';
+      // just use last part of multi path for oci image name
       var strippedPath = imageUrl.path;
       if (strippedPath.contains('/')) {
-        strippedPath = strippedPath.substring(strippedPath.lastIndexOf('/')+1);
+        strippedPath =
+            strippedPath.substring(strippedPath.lastIndexOf('/') + 1);
       }
       args.add('oci:$strippedPath:${imageUrl.version}');
       outputString += ' oci:$strippedPath:${imageUrl.version}';
@@ -267,102 +237,97 @@ class SkopeoCommand {
         Log.info(outputString);
       }
       var process = await Process.start('skopeo', args, runInShell: true);
-      process.stdout.transform(utf8.decoder).forEach((line) {stdout.write(line);});
-      process.stderr.transform(utf8.decoder).forEach((line) {stdout.write(line);});
+      process.stdout.transform(utf8.decoder).forEach((line) {
+        stdout.write(line);
+      });
+      process.stderr.transform(utf8.decoder).forEach((line) {
+        stdout.write(line);
+      });
       if (await process.exitCode != 0) {
-        throw TieError("copying image: $image");
+        throw TieError("copying image: $sourceImage");
       }
     } catch (error) {
       rethrow;
     }
   }
 
-  Future<void> pushImageBuild(TieContext tieContext, String srcImage, String destImage) async {
+  Future<void> pushImageBuild(
+      TieContext tieContext, String sourceImage, String destinationImage) async {
     try {
-
       List<String> args = ['copy'];
       var outputString = 'skopeo copy';
-
       // does image have repo port
-      var imageUrl = ImageUrl(destImage);
-      if (imageUrl.host.isNotNullNorEmpty) {
-        // assume we have registry part so check if we have one setup for auth
-        ImageRepository imageRepository;
-        for (var repo in tieContext.repositories) {
-          if (imageUrl.host == repo.url) {
-            destRepo = repo.url;
-            destUsername = repo.username;
-            destPassword = repo.password;
-            destToken = repo.token;
-            if (repo.tlsVerify != null) {
-              destTlsVerify = repo.tlsVerify!;
-            }
-
-            if (destUsername.isNotNullNorEmpty && destPassword.isNotNullNorEmpty) {
-              args.add('--dest-creds');
-              args.add('$destUsername:$destPassword');
-              outputString += ' --dest-creds ****';
-            } else if (destUsername.isNotNullNorEmpty && destToken.isNotNullNorEmpty) {
-              args.add('--dest-creds');
-              args.add('$destUsername:$destToken');
-              outputString += ' --dest-creds ****';
-            } else if (destToken.isNotNullNorEmpty) {
-              args.add('--dest-creds');
-              args.add('token:$destToken');
-              outputString += ' --dest-creds token:$destToken';
-            }
-            if (destTlsVerify) {
-              args.add('--dest-tls-verify');
-              outputString += ' --dest-tls-verify';
-            }
-          }
-        }
+      var imageUrl = ImagePath(destinationImage);
+      if (destinationUsername.isNotNullNorEmpty && destinationPassword.isNotNullNorEmpty) {
+        args.add('--dest-creds');
+        args.add('$destinationUsername:$destinationPassword');
+        outputString += ' --dest-creds ****';
+      } else if (destinationUsername.isNotNullNorEmpty &&
+          destinationToken.isNotNullNorEmpty) {
+        args.add('--dest-creds');
+        args.add('$destinationUsername:$destinationToken');
+        outputString += ' --dest-creds ****';
+      } else if (destinationToken.isNotNullNorEmpty) {
+        args.add('--dest-creds');
+        args.add('token:$destinationToken');
+        outputString += ' --dest-creds token:$destinationToken';
+      }
+      if (destinationTlsVerify) {
+        args.add('--dest-tls-verify');
+        outputString += ' --dest-tls-verify';
       }
 
-      args.add('oci:$srcImage');
-      outputString += ' oci:$srcImage';
-      args.add('docker://$destImage');
-      outputString += ' docker://$destImage';
+      args.add('oci:$sourceImage');
+      outputString += ' oci:$sourceImage';
+      args.add('docker://$destinationImage');
+      outputString += ' docker://$destinationImage';
 
       if (_config.traceCommands) {
         Log.info(outputString);
       }
       var process = await Process.start('skopeo', args, runInShell: true);
-      process.stdout.transform(utf8.decoder).forEach((line) {stdout.write(line);});
-      process.stderr.transform(utf8.decoder).forEach((line) {stdout.write(line);});
+      process.stdout.transform(utf8.decoder).forEach((line) {
+        stdout.write(line);
+      });
+      process.stderr.transform(utf8.decoder).forEach((line) {
+        stdout.write(line);
+      });
       if (await process.exitCode != 0) {
-        throw TieError("copying image: $srcImage");
+        throw TieError("copying image: $sourceImage");
       }
     } catch (error) {
       rethrow;
     }
   }
 
-  Future<String> ociInspect(String srcImage) async {
+  Future<String> ociInspect(String sourceImage) async {
     var output = '';
     List<String> args = [];
     args.add('inspect');
     args.add('--config');
     var outputString = 'skopeo inspect --config';
 
-      args.add('oci:$srcImage');
-      outputString += ' oci:$srcImage';
+    args.add('oci:$sourceImage');
+    outputString += ' oci:$sourceImage';
 
-      if (_config.traceCommands) {
-        Log.info(outputString);
-      }
+    if (_config.traceCommands) {
+      Log.info(outputString);
+    }
 
-      var process = await Process.start('skopeo', args, runInShell: true);
-      if (await process.exitCode != 0) {
-        process.stdout.transform(utf8.decoder).forEach((line) {stdout.write(line);});
-        process.stderr.transform(utf8.decoder).forEach((line) {stdout.write(line);});
-        throw TieError('skopeo inspect image $srcImage failed');
-      } else {
-        output = await process.stdout.transform(utf8.decoder).join();
-        output = output.replaceAll('\n', '');
-      }
+    var process = await Process.start('skopeo', args, runInShell: true);
+    if (await process.exitCode != 0) {
+      process.stdout.transform(utf8.decoder).forEach((line) {
+        stdout.write(line);
+      });
+      process.stderr.transform(utf8.decoder).forEach((line) {
+        stdout.write(line);
+      });
+      throw TieError('skopeo inspect image $sourceImage failed');
+    } else {
+      output = await process.stdout.transform(utf8.decoder).join();
+      output = output.replaceAll('\n', '');
+    }
 
     return output;
   }
-
 }

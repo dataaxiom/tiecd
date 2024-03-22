@@ -6,7 +6,9 @@ import 'package:meta/meta.dart';
 import 'package:tiecd/src/api/types.dart';
 import 'package:tiecd/src/commands/skopeo.dart';
 import 'package:tiecd/src/commands/umoci.dart';
+import 'package:tiecd/src/extensions.dart';
 
+import '../project/factory.dart';
 import '../util.dart';
 import 'dsl.dart';
 
@@ -63,9 +65,7 @@ class DeployContext extends TieContext {
 
 class BuildContext extends TieContext {
 
-  ProjectProvider projectProvider;
-
-  BuildContext(super.config, super.repositories, this.projectProvider, super.app);
+  BuildContext(super.config, super.repositories, super.app);
 
 }
 
@@ -89,8 +89,6 @@ void readProperties(Config config, String fileName, Map<String,String> propertie
 }
 
 
-
-
 abstract class DeployProvider {
   void expandEnvironment(Environment environment);
   Future<void> login(DeployContext deployContext);
@@ -106,10 +104,13 @@ abstract class DeployProvider {
   String getDestinationImageName(Environment environment, Image image);
 }
 
+enum CIProvider { gitlab, github, unknown }
+
 abstract class ProjectProvider {
   BuildType? _buildType;
   String? _name;
   String? _version;
+  CIProvider? _ciProvider;
 
   @protected
   BuildType? get buildType => _buildType;
@@ -125,6 +126,36 @@ abstract class ProjectProvider {
   String? get version => _version;
   @protected
   set version(String? version) => _version = version;
+
+  @protected
+  CIProvider? get ciProvider => _ciProvider;
+  @protected
+  set ciProvider(CIProvider? ciProvider) => _ciProvider = ciProvider;
+
+  ProjectProvider() {
+    var test = Platform.environment['CI_PROJECT_NAME'];
+    if (test.isNotNullNorEmpty) {
+      _ciProvider = CIProvider.gitlab;
+    } else {
+      test = Platform.environment['GITHUB_REPOSITORY'];
+      if (test.isNotNullNorEmpty) {
+        _ciProvider = CIProvider.github;
+      }
+    }
+    _ciProvider ??= CIProvider.unknown;
+  }
+
+  // if the ci environment provides one
+  String? getImagePath() {
+    if (_ciProvider == CIProvider.gitlab) {
+      return Platform.environment['CI_REGISTRY_IMAGE'];
+    } else if (_ciProvider == CIProvider.gitlab) {
+      if (Platform.environment['GITHUB_REPOSITORY'].isNotNullNorEmpty) {
+        return 'ghcr.io/${Platform.environment['GITHUB_REPOSITORY']}';
+      }
+    }
+    return null;
+  }
 
   void init();
   bool isProject();
