@@ -17,5 +17,4 @@ modules:
     - name: node.package.repo 
       version: "20"
     - name: node
-    - name: yarn
     - name: pnpm
