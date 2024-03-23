@@ -9,7 +9,7 @@ import '../commands/umoci.dart';
 import '../log.dart';
 import '../project/factory.dart';
 import '../util.dart';
-import '../api/dsl.dart';
+import '../api/tiefile.dart';
 import 'base.dart';
 
 class BuildExecutor extends BaseExecutor {

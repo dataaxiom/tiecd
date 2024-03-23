@@ -7,7 +7,7 @@ import 'package:tiecd/src/extensions.dart';
 import 'package:yaml/yaml.dart';
 import 'package:checked_yaml/checked_yaml.dart';
 
-import '../api/dsl.dart';
+import '../api/tiefile.dart';
 import '../api/provider.dart';
 import '../api/types.dart';
 import '../log.dart';

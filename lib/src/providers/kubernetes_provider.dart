@@ -11,7 +11,7 @@ import 'package:yaml/yaml.dart';
 import 'package:kubernetes/kubernetes.dart';
 import 'package:kubernetes/core_v1.dart' as api_core_v1;
 
-import '../api/dsl.dart';
+import '../api/tiefile.dart';
 import '../api/provider.dart';
 import '../api/types.dart';
 import '../commands/helm.dart';

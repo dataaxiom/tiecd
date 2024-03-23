@@ -1,6 +1,6 @@
 import 'package:json_annotation/json_annotation.dart';
 
-part 'dsl.g.dart';
+part 'tiefile.g.dart';
 
 @JsonSerializable()
 class Proxy {

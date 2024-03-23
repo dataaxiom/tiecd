@@ -4,7 +4,7 @@ import 'package:tiecd/src/api/types.dart';
 import 'package:tiecd/src/extensions.dart';
 import 'package:xml/xml.dart';
 
-import '../api/dsl.dart';
+import '../api/tiefile.dart';
 import '../api/provider.dart';
 import '../commands/umoci.dart';
 

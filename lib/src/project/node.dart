@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:tiecd/src/api/dsl.dart';
+import 'package:tiecd/src/api/tiefile.dart';
 import 'package:tiecd/src/commands/umoci.dart';
 import 'package:tiecd/src/extensions.dart';
 

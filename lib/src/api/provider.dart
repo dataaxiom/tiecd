@@ -10,7 +10,7 @@ import 'package:tiecd/src/extensions.dart';
 
 import '../project/factory.dart';
 import '../util.dart';
-import 'dsl.dart';
+import 'tiefile.dart';
 
 class TieContext {
   Config config;

@@ -6,7 +6,7 @@ import 'package:tiecd/src/impl/base.dart';
 import 'package:tiecd/src/providers/gke_provider.dart';
 import 'package:yaml/yaml.dart';
 
-import '../api/dsl.dart';
+import '../api/tiefile.dart';
 import '../api/provider.dart';
 import '../api/types.dart';
 import '../log.dart';

@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:tiecd/src/api/provider.dart';
 import 'package:tiecd/src/extensions.dart';
 
-import '../api/dsl.dart';
+import '../api/tiefile.dart';
 import '../api/types.dart';
 import '../log.dart';
 import '../util.dart';
