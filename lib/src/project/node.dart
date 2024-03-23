@@ -43,9 +43,9 @@ class NodeProject extends ProjectProvider {
     var version = Platform.environment['TIECD_NODE_VERSION'];
     if (version.isNotNullNorEmpty) {
       if (version == "18") {
-        return 'node:18-bookworm-slim';
+        return 'node:18-alpine';
       } else if (version == "20") {
-        return 'node:20-bookworm-slim';
+        return 'node:20-alpine';
       }
     }
     return 'node:20-alpine';

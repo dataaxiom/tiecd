@@ -3,7 +3,7 @@ schema_version: 1
 name: "ghcr.io/dataaxiom/tiecd"
 description: "A simplified CICD toolchain for kubernetes deployments"
 version: latest
-from: "node:18-bookworm-slim"
+from: "ubuntu:22.04" 
 
 envs:
   - name: TIECD_NODE_VERSION
@@ -17,4 +17,5 @@ modules:
     - name: node.package.repo 
       version: "18"
     - name: node
+    - name: yarn
     - name: pnpm
