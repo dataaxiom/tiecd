@@ -108,7 +108,7 @@ String expandFileByContents(String value, String fileExtension) {
   return expandFileByContentsWithProperties(value, fileExtension, null);
 }
 
-String expandFileByName(String filename, Map<String,String>? properties) {
+String expandFileByName(String filename, Map<String, String>? properties) {
   var builder = '';
   var value = File(filename).readAsStringSync();
   var extension = '';
@@ -177,7 +177,8 @@ bool isPassword(Config config, String value) {
   return isSecret;
 }
 
-void sanitizeString(Config config, String key, String value, Map<String, dynamic> json) {
+void sanitizeString(
+    Config config, String key, String value, Map<String, dynamic> json) {
   bool isSecret = false;
   for (var label in config.secretLabelSet) {
     if ((key == 'apiConfig' || key == 'apiClientCA') &&
@@ -186,7 +187,8 @@ void sanitizeString(Config config, String key, String value, Map<String, dynamic
       break;
     }
     if (key.toLowerCase().contains(label) &&
-        !(value.startsWith('\${') && value.endsWith('}')) && !key.startsWith('TIECD_')) {
+        !(value.startsWith('\${') && value.endsWith('}')) &&
+        !key.startsWith('TIECD_')) {
       isSecret = true;
       break;
     }
@@ -204,18 +206,19 @@ void sanitizeDoc(Config config, Map<String, dynamic> json) {
     } else if (value is Iterable) {
       for (var item in value) {
         if (item is String) {
-          sanitizeString(config,key,item,json);
+          sanitizeString(config, key, item, json);
         } else if (item is Map) {
           sanitizeDoc(config, item as Map<String, dynamic>);
         } // list?
       }
     } else if (value is String) {
-      sanitizeString(config,key,value,json);
+      sanitizeString(config, key, value, json);
     }
   });
 }
 
-Future<void> runScript(TieContext tieContext, String script, {Map<String,String>? environment}) async {
+Future<void> runScript(TieContext tieContext, String script,
+    {Map<String, String>? environment}) async {
   if (script.isNullOrEmpty) {
     throw TieError('script can not be empty in app: ${tieContext.app.name}');
   }
@@ -227,10 +230,14 @@ Future<void> runScript(TieContext tieContext, String script, {Map<String,String>
     environment.forEach((key, value) => env[key] = value);
   }
   env['PATH'] = '${env['PATH']}:.'; // linux specific
-  var process = await Process.start('/bin/sh', ['-c',script],environment: env,
-      workingDirectory: tieContext.config.baseDir);
-  process.stdout.transform(utf8.decoder).forEach((line) {stdout.write(line);});
-  process.stderr.transform(utf8.decoder).forEach((line) {stdout.write(line);});
+  var process = await Process.start('/bin/sh', ['-c', script],
+      environment: env, workingDirectory: tieContext.config.baseDir);
+  process.stdout.transform(utf8.decoder).forEach((line) {
+    stdout.write(line);
+  });
+  process.stderr.transform(utf8.decoder).forEach((line) {
+    stdout.write(line);
+  });
   if (await process.exitCode != 0) {
     throw TieError('running command: $script');
   }
@@ -245,6 +252,7 @@ class ImagePath {
   String path = '';
   String name = '';
   String version = '';
+  bool isSha = false;
 
   ImagePath(String url) {
     List<String> parts = url.split('/');
@@ -252,7 +260,7 @@ class ImagePath {
       if (parts[0].contains('.')) {
         // we assume first part is hostname
         host = parts[0];
-        initVersion(url.substring(host.length+1));
+        initVersion(url.substring(host.length + 1));
       } else {
         initVersion(url);
       }
@@ -262,7 +270,13 @@ class ImagePath {
   }
 
   void initVersion(String image) {
-    List<String> parts = image.split(':');
+    List<String> parts = [];
+    if (image.contains('@')) {
+      parts = image.split('@');
+      isSha = true;
+    } else {
+      parts = image.split(':');
+    }
     if (parts.length == 2) {
       path = parts[0];
       version = parts[1];
@@ -271,7 +285,7 @@ class ImagePath {
       version = 'latest';
     }
     if (path.contains('/')) {
-      name = path.substring(path.lastIndexOf('/')+1);
+      name = path.substring(path.lastIndexOf('/') + 1);
     } else {
       name = path;
     }
