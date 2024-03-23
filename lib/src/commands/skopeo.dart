@@ -279,7 +279,7 @@ class SkopeoCommand {
       List<String> args = ['copy'];
       var outputString = 'skopeo copy';
       // does image have repo port
-print("rohan: ${destinationUsername!}");
+
       if (destinationUsername.isNotNullNorEmpty &&
           destinationPassword.isNotNullNorEmpty) {
         args.add('--dest-creds');
@@ -300,10 +300,15 @@ print("rohan: ${destinationUsername!}");
         outputString += ' --dest-tls-verify';
       }
 
+      String image = destinationImage;
+      ImagePath imagePath = ImagePath(destinationImage);
+      if (imagePath.version == '') {
+        image = '$destinationImage:latest';
+      }
       args.add('oci:$sourceImage');
       outputString += ' oci:$sourceImage';
-      args.add('docker://$destinationImage');
-      outputString += ' docker://$destinationImage';
+      args.add('docker://$image');
+      outputString += ' docker://$image';
 
       if (_config.traceCommands) {
         Log.info(outputString);
