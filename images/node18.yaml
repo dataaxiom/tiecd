@@ -5,6 +5,10 @@ description: "A simplified CICD toolchain for kubernetes deployments"
 version: latest
 from: "debian:18-bookworm-slim"
 
+envs:
+  - name: TIECD_NODE_VERSION
+    value: "18"
+
 modules:
   repositories:
     - path: modules
