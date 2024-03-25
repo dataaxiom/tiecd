@@ -20,7 +20,7 @@ import '../log.dart';
 import '../util.dart';
 import '../extensions.dart';
 
-class KubernetesProvider implements DeployHandler {
+class KubernetesHandler implements DeployHandler {
   final Config _config;
   String? _kubeConfigFilename;
   KubernetesClient? _kubernetesClient;
@@ -37,7 +37,7 @@ class KubernetesProvider implements DeployHandler {
   @protected
   Config get config => _config;
 
-  KubernetesProvider(this._config) {
+  KubernetesHandler(this._config) {
     _kubeConfigFilename = "${_config.scratchDir}/${Uuid().v4()}";
   }
 

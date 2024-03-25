@@ -6,15 +6,15 @@ import 'package:uuid/uuid.dart';
 
 import '../extensions.dart';
 import '../log.dart';
-import 'kubernetes_provider.dart';
+import 'kubernetes_handler.dart';
 
 
-class GKEProvider extends KubernetesProvider {
+class GKEHandler extends KubernetesHandler {
 
   bool _keyFileOutputted = false;
   String? _keyFile;
 
-  GKEProvider(super.config) {
+  GKEHandler(super.config) {
     // we use default kube_config file location
     kubeConfigFilename = '${Platform.environment['HOME']}/.kube/config';
   }

@@ -1,16 +1,16 @@
 import 'dart:io';
 
 import 'package:intl/intl.dart';
-import 'package:tiecd/src/extensions.dart';
-import 'package:tiecd/src/impl/base.dart';
-import 'package:tiecd/src/providers/gke_provider.dart';
 import 'package:yaml/yaml.dart';
 
+import '../impl/base.dart';
 import '../api/tiefile.dart';
 import '../api/types.dart';
 import '../log.dart';
-import '../providers/kubernetes_provider.dart';
+import '../handlers/kubernetes_handler.dart';
+import '../handlers/gke_handler.dart';
 import '../util.dart';
+import '../extensions.dart';
 
 class DeployExecutor extends BaseExecutor {
   DeployExecutor(super._config);
@@ -84,9 +84,9 @@ class DeployExecutor extends BaseExecutor {
           throw TieError('provider type is not set');
         } else if (environment.apiType == "kubernetes") {
           if (environment.apiProvider == "gke") {
-            provider = GKEProvider(config);
+            provider = GKEHandler(config);
           } else {
-            provider = KubernetesProvider(config);
+            provider = KubernetesHandler(config);
           }
         } else {
           printObject('environment', 'Environment in use:', environment.toJson());
