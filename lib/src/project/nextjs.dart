@@ -1,8 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
-import '../api/provider.dart';
-import '../api/types.dart';
+import '../api/tiefile.dart';
 import '../commands/umoci.dart';
 import 'node.dart';
 
@@ -66,6 +65,11 @@ class NextJSProject extends NodeProject {
       '--config.label=tiecd.image.type=nextjs',
     ];
     return options;
+  }
+
+  @override
+  void expandImageDefinition(ImageDefinition definition) {
+
   }
 
 

@@ -1,30 +1,29 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:crypto/crypto.dart';
 import 'package:http/io_client.dart';
 import 'package:json2yaml/json2yaml.dart';
 import 'package:meta/meta.dart';
 import 'package:posix/posix.dart';
-import 'package:tiecd/src/extensions.dart';
 import 'package:uuid/uuid.dart';
 import 'package:yaml/yaml.dart';
 import 'package:kubernetes/kubernetes.dart';
 import 'package:kubernetes/core_v1.dart' as api_core_v1;
 
 import '../api/tiefile.dart';
-import '../api/provider.dart';
 import '../api/types.dart';
 import '../commands/helm.dart';
 import '../commands/kubectl.dart';
 import '../commands/skopeo.dart';
 import '../log.dart';
 import '../util.dart';
+import '../extensions.dart';
 
-class KubernetesProvider implements DeployProvider {
+class KubernetesProvider implements DeployHandler {
   final Config _config;
   String? _kubeConfigFilename;
   KubernetesClient? _kubernetesClient;
-  KubernetesClient? kubernetesClient;
   IOClient? _ioClient;
   final Set<String> _namespaces = {};
 
@@ -239,7 +238,7 @@ class KubernetesProvider implements DeployProvider {
   }
 
   @override
-  Future<void> processImage(DeployContext deployContext) async {
+  Future<void> handleImage(DeployContext deployContext) async {
     if (deployContext.app.image != null) {
       var skopeoCmd = SkopeoCommand(_config);
       var image = deployContext.app.image!;
@@ -328,7 +327,7 @@ class KubernetesProvider implements DeployProvider {
   }
 
   @override
-  Future<void> processConfig(DeployContext deployContext) async {
+  Future<void> handleConfig(DeployContext deployContext) async {
     if (deployContext.app.deploy!.mountFiles != null) {
       StringBuffer checksum = StringBuffer();
       for (var mountFile in deployContext.app.deploy!.mountFiles!) {
@@ -390,12 +389,12 @@ class KubernetesProvider implements DeployProvider {
   }
 
   @override
-  Future<void> processSecrets(DeployContext deployContext) async {
+  Future<void> handleSecrets(DeployContext deployContext) async {
     //throw new Error('Method not implemented.');
   }
 
   @override
-  Future<void> processHelm(DeployContext deployContext) async {
+  Future<void> handleHelm(DeployContext deployContext) async {
     if (deployContext.app.deploy!.helmChart != null) {
       var chart = deployContext.app.deploy!.helmChart!;
       var chartLog = chart.url;
@@ -433,7 +432,7 @@ class KubernetesProvider implements DeployProvider {
   }
 
   @override
-  Future<String> processDeploy(DeployContext deployContext) async {
+  Future<String> deploy(DeployContext deployContext) async {
     var checkSum = '';
     if (deployContext.app.deploy!.manifests != null) {
       for (var templateFile in deployContext.app.deploy!.manifests!) {

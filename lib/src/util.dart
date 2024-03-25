@@ -3,7 +3,6 @@ import 'dart:io';
 
 import 'package:tiecd/src/extensions.dart';
 
-import 'api/provider.dart';
 import 'api/types.dart';
 import 'log.dart';
 

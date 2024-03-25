@@ -1,12 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:tiecd/src/api/tiefile.dart';
-import 'package:tiecd/src/commands/umoci.dart';
-import 'package:tiecd/src/extensions.dart';
-
-import '../api/provider.dart';
+import '../api/tiefile.dart';
 import '../api/types.dart';
+import '../commands/umoci.dart';
+import '../extensions.dart';
 
 class NodeProject extends ProjectProvider {
 
@@ -90,4 +88,8 @@ class NodeProject extends ProjectProvider {
     return [];
   }
 
+  @override
+  void expandImageDefinition(ImageDefinition definition) {
+
+  }
 }

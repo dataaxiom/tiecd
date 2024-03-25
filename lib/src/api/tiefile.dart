@@ -197,8 +197,13 @@ enum ImageType { plain, springboot, jetty, karaf, tomcat, node, nginx }
 class ImageDefinition {
 
   String? from;
-  List<String>? ports;
   String? author;
+  List<String>? copy;
+  List<String>? expose; //ports
+  List<String>? env;
+  List<String>? label;
+  String? workdir;
+  List<String>? cmd;
 
   ImageDefinition();
 
@@ -206,6 +211,7 @@ class ImageDefinition {
   Map<String, dynamic> toJson() => _$ImageDefinitionToJson(this);
 
 }
+
 
 @JsonSerializable()
 class Build {

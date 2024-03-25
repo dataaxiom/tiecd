@@ -8,7 +8,6 @@ import 'package:yaml/yaml.dart';
 import 'package:checked_yaml/checked_yaml.dart';
 
 import '../api/tiefile.dart';
-import '../api/provider.dart';
 import '../api/types.dart';
 import '../log.dart';
 import '../project/factory.dart';
@@ -406,7 +405,8 @@ abstract class BaseExecutor {
               }
             }
             if (includeApp.build!.imageDefinition != null) {
-              //todo
+              app.image ??= Image();
+              // TODO
             }
           }
 

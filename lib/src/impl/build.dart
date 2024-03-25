@@ -1,13 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:tiecd/src/api/provider.dart';
 import 'package:tiecd/src/commands/skopeo.dart';
 import 'package:tiecd/src/extensions.dart';
 
+import '../api/types.dart';
 import '../commands/umoci.dart';
 import '../log.dart';
-import '../project/factory.dart';
 import '../util.dart';
 import '../api/tiefile.dart';
 import 'base.dart';
@@ -142,8 +141,8 @@ class BuildExecutor extends BaseExecutor {
             }
           }
 
-          if (app.build!.imageDefinition!.ports != null) {
-            for (var port in app.build!.imageDefinition!.ports!) {
+          if (app.build!.imageDefinition!.expose != null) {
+            for (var port in app.build!.imageDefinition!.expose!) {
               options.add('--config.exposedports=$port');
             }
           }

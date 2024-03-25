@@ -1,11 +1,9 @@
 import 'dart:io';
 import 'package:meta/meta.dart';
-import 'package:tiecd/src/api/types.dart';
-import 'package:tiecd/src/extensions.dart';
 import 'package:xml/xml.dart';
 
 import '../api/tiefile.dart';
-import '../api/provider.dart';
+import '../api/types.dart';
 import '../commands/umoci.dart';
 
 class JavaProject extends ProjectProvider {
@@ -192,6 +190,11 @@ class JavaProject extends ProjectProvider {
   @override
   List<String> getUmociOptions() {
     return [];
+  }
+
+  @override
+  void expandImageDefinition(ImageDefinition definition) {
+
   }
 
 }

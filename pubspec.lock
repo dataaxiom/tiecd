@@ -309,10 +309,10 @@ packages:
     dependency: "direct main"
     description:
       name: kubernetes
-      sha256: deb0059e8981fbedb9017769d6fd294fa5e81b84428092e2a12dd7eafa9d41bd
+      sha256: "48d165df689a757f118145a796b593ac8da4a6ca1c52152a60fb1d9705272659"
       url: "https://pub.dev"
     source: hosted
-    version: "1.26.0+4"
+    version: "1.26.0+5"
   lints:
     dependency: "direct dev"
     description:

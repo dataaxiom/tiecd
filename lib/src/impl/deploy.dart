@@ -7,7 +7,6 @@ import 'package:tiecd/src/providers/gke_provider.dart';
 import 'package:yaml/yaml.dart';
 
 import '../api/tiefile.dart';
-import '../api/provider.dart';
 import '../api/types.dart';
 import '../log.dart';
 import '../providers/kubernetes_provider.dart';
@@ -79,7 +78,7 @@ class DeployExecutor extends BaseExecutor {
         environment = environment.clone();
 
         preExpandEnvironment(environment);
-        DeployProvider provider;
+        DeployHandler provider;
         if (environment.apiType == null) {
           printObject('environment', 'Environment in use:', environment.toJson());
           throw TieError('provider type is not set');
@@ -136,18 +135,18 @@ class DeployExecutor extends BaseExecutor {
           action ??= Action.install;
 
           if (action == Action.install) {
-            await provider.processImage(context);
+            await provider.handleImage(context);
             if (app.deploy!.beforeScripts != null) {
               await provider.runScripts(
                   context, app.deploy!.beforeScripts!);
             }
-            await provider.processConfig(context);
-            await provider.processSecrets(context);
+            await provider.handleConfig(context);
+            await provider.handleSecrets(context);
             if (app.deploy!.scripts != null) {
               await provider.runScripts(
                   context, app.deploy!.scripts!);
             }
-            var checksum = await provider.processDeploy(context);
+            var checksum = await provider.deploy(context);
             if (checksum != '') {
               context.app.tiecdEnv!["TIECD_MANIFEST_HASH"] = checksum;
               if (config.verbose) {
@@ -155,7 +154,7 @@ class DeployExecutor extends BaseExecutor {
                     'adding TIECD_MANIFEST_HASH to environment: $checksum');
               }
             }
-            await provider.processHelm(context);
+            await provider.handleHelm(context);
             if (app.deploy!.afterScripts != null) {
               await provider.runScripts(
                   context, app.deploy!.afterScripts!);

@@ -5,7 +5,6 @@ import 'package:tiecd/src/api/types.dart';
 import 'package:uuid/uuid.dart';
 
 import '../extensions.dart';
-import '../api/provider.dart';
 import '../log.dart';
 import 'kubernetes_provider.dart';
 

@@ -141,7 +141,7 @@ void showHeader(Config config) {
     print('     ██║    ██║ ███████╗ ╚██████╗ ██████╔╝');
     print('     ╚═╝    ╚═╝ ╚══════╝  ╚═════╝ ╚═════╝ ');
     print(' ');
-    print('      https://dataaxiom.com/tiecd');
+    print('             https://tie.cd');
     print(' ');
   }
   if (config.verbose) {

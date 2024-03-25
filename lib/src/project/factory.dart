@@ -3,7 +3,7 @@ import 'package:tiecd/src/project/nextjs.dart';
 import 'package:tiecd/src/project/node.dart';
 import 'package:tiecd/src/project/springboot.dart';
 
-import '../api/provider.dart';
+import '../api/types.dart';
 
 ProjectProvider? buildProject() {
   // cycle through to find the project time
