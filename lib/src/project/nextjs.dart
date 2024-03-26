@@ -26,6 +26,7 @@ class NextJSProject extends NodeProject {
       if (dependencies != null) {
         if (dependencies['next'] != null) {
           _isNextjs = true;
+          imageType = ImageType.nextjs;
         }
       }
 
@@ -45,32 +46,15 @@ class NextJSProject extends NodeProject {
 //  };
 //  export default nextConfig;
 
-  @override
-  void copyArtifactsIntoImage(UmociCommand umoci) async {
-    await umoci.copyDirectory('.next/standalone', '/app');
-    await umoci.copyDirectory('.next/static', '/app/.next/static');
-    await umoci.copyDirectory('public', '/app/public');
+  static ImageDefinition defaultImageDefinition() {
+    ImageDefinition definition = NodeProject.defaultImageDefinition();
+    definition.expose = ['3000'];
+    definition.cmd = ['node','server.js'];
+    definition.workdir = '/app';
+    definition.env = ['NODE_ENV=production','HOSTNAME=0.0.0.0','NEXT_TELEMETRY_DISABLED=1'];
+    definition.label = ['tiecd.image.type=nextjs'];
+    definition.copy = ['.next/standalone /app','.next/static /app/.next/static','public /app/public'];
+    return definition;
   }
-
-  @override
-  List<String> getUmociOptions() {
-    var options = [
-      '--config.workingdir=/app',
-      '--config.cmd=node',
-      '--config.cmd=server.js',
-      '--config.env=NODE_ENV=production',
-      '--config.env=HOSTNAME=0.0.0.0',
-      '--config.env=NEXT_TELEMETRY_DISABLED=1',
-      '--config.exposedports=3000',
-      '--config.label=tiecd.image.type=nextjs',
-    ];
-    return options;
-  }
-
-  @override
-  void expandImageDefinition(ImageDefinition definition) {
-
-  }
-
 
 }

@@ -37,14 +37,10 @@ class NodeProject extends ProjectProvider {
   }
 
   @override
-  String getBaseImage() {
+  String baseImage() {
     var version = Platform.environment['TIECD_NODE_VERSION'];
     if (version.isNotNullNorEmpty) {
-      if (version == "18") {
-        return 'node:18-alpine';
-      } else if (version == "20") {
-        return 'node:20-alpine';
-      }
+      return 'node:$version-alpine';
     }
     return 'node:20-alpine';
   }
@@ -71,7 +67,7 @@ class NodeProject extends ProjectProvider {
   }
   @override
   List<String>? afterBuildScripts() {
-    return null;
+    return [];
   }
 
   @override
@@ -79,17 +75,15 @@ class NodeProject extends ProjectProvider {
     return {};
   }
 
-  @override
-  void copyArtifactsIntoImage(UmociCommand umoci) {
+  static ImageDefinition defaultImageDefinition() {
+    ImageDefinition definition = ImageDefinition();
+    var version = Platform.environment['TIECD_NODE_VERSION'];
+    if (version.isNotNullNorEmpty) {
+      definition.from = 'node:$version-alpine';
+    } else {
+      definition.from = 'node:20-alpine';
+    }
+    return definition;
   }
 
-  @override
-  List<String> getUmociOptions() {
-    return [];
-  }
-
-  @override
-  void expandImageDefinition(ImageDefinition definition) {
-
-  }
 }

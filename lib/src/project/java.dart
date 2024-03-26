@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:meta/meta.dart';
+import 'package:tiecd/src/extensions.dart';
 import 'package:xml/xml.dart';
 
 import '../api/tiefile.dart';
@@ -151,7 +152,6 @@ class JavaProject extends ProjectProvider {
     }
   }
 
-
   @override
   bool isProject() {
     return _isJava;
@@ -179,22 +179,10 @@ class JavaProject extends ProjectProvider {
   @override
   List<String>? afterBuildScripts() {}
 
-  @override
-  void copyArtifactsIntoImage(UmociCommand umoci) {}
-
-  @override
-  String getBaseImage() {
-    return "quay.io/jkube/jkube-java:0.0.23";
-  }
-
-  @override
-  List<String> getUmociOptions() {
-    return [];
-  }
-
-  @override
-  void expandImageDefinition(ImageDefinition definition) {
-
+  static ImageDefinition defaultImageDefinition() {
+    ImageDefinition definition = ImageDefinition();
+     // "quay.io/jkube/jkube-java:0.0.23";
+    return definition;
   }
 
 }

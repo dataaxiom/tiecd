@@ -1,3 +1,4 @@
+import 'package:tiecd/src/api/tiefile.dart';
 import 'package:tiecd/src/project/java.dart';
 import 'package:tiecd/src/project/nextjs.dart';
 import 'package:tiecd/src/project/node.dart';
@@ -15,6 +16,7 @@ ProjectProvider? buildProject() {
     NextJSProject nextjs = NextJSProject();
     nextjs.init();
     if (nextjs.isProject()) {
+      print("is nextjs");
       return nextjs;
     }
   }
@@ -32,4 +34,19 @@ ProjectProvider? buildProject() {
   }
 
   return null;
+}
+
+
+ImageDefinition? defaultImageDefinition(ImageType imageType) {
+  ImageDefinition? definition;
+  switch (imageType) {
+    case (ImageType.springboot):
+      return SpringbootProject.defaultImageDefinition();
+    case (ImageType.node):
+      return NodeProject.defaultImageDefinition();
+    case (ImageType.nextjs):
+      return NextJSProject.defaultImageDefinition();
+    default:
+  }
+  return definition;
 }

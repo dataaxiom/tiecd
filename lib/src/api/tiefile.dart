@@ -190,12 +190,11 @@ class Volume {
   Map<String, dynamic> toJson() => _$VolumeToJson(this);
 }
 
-enum BuildType { maven, gradle, npm, yarn, pnpm }
-enum ImageType { plain, springboot, jetty, karaf, tomcat, node, nginx }
+enum BuildType { maven, gradle, npm, yarn, pnpm, flutter }
+enum ImageType { plain, springboot, jetty, karaf, tomcat, node, nextjs, nginx }
 
 @JsonSerializable()
 class ImageDefinition {
-
   String? from;
   String? author;
   List<String>? copy;
@@ -206,10 +205,8 @@ class ImageDefinition {
   List<String>? cmd;
 
   ImageDefinition();
-
   factory ImageDefinition.fromJson(Map json) => _$ImageDefinitionFromJson(json);
   Map<String, dynamic> toJson() => _$ImageDefinitionToJson(this);
-
 }
 
 
@@ -220,7 +217,6 @@ class Build {
   List<String>? beforeScripts;
   List<String>? scripts;
   List<String>? afterScripts;
-
   // image setup
   ImageDefinition? imageDefinition;
 

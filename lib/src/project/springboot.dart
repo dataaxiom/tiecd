@@ -1,7 +1,10 @@
 import 'dart:io';
-import 'package:tiecd/src/extensions.dart';
+
 import 'package:xml/xml.dart';
+
+import '../api/tiefile.dart';
 import '../api/types.dart';
+import '../extensions.dart';
 import 'java.dart';
 
 class SpringbootProject extends JavaProject {
@@ -15,12 +18,21 @@ class SpringbootProject extends JavaProject {
 
     // check if pom has springboot parent
     var groupId = document
-        .getElement('project')?.getElement('parent')?.getElement('groupId')?.innerText;
+        .getElement('project')
+        ?.getElement('parent')
+        ?.getElement('groupId')
+        ?.innerText;
     var artifactId = document
-        .getElement('project')?.getElement('parent')?.getElement('artifactId')?.innerText;
+        .getElement('project')
+        ?.getElement('parent')
+        ?.getElement('artifactId')
+        ?.innerText;
 
-    if (groupId.isNotNullNorEmpty && groupId == 'org.springframework.boot' && artifactId.isNotNullNorEmpty && artifactId == 'spring-boot-starter-parent') {
+    if (groupId.isNotNullNorEmpty && groupId == 'org.springframework.boot' &&
+        artifactId.isNotNullNorEmpty &&
+        artifactId == 'spring-boot-starter-parent') {
       _isSpringboot = true;
+      imageType = ImageType.springboot;
     }
 
     var javaVersion = document
@@ -30,7 +42,6 @@ class SpringbootProject extends JavaProject {
         ?.innerText;
 
     if (javaVersion.isNotNullNorEmpty) {
-
       if (javaVersion == '1.8') {
         javaVersion = '8';
       }
@@ -51,5 +62,13 @@ class SpringbootProject extends JavaProject {
   bool isProject() {
     return _isSpringboot;
   }
+
+  static ImageDefinition defaultImageDefinition() {
+    ImageDefinition definition = JavaProject.defaultImageDefinition();
+    definition.from = 'quay.io/jkube/jkube-java:0.0.23';
+    definition.expose = ['8080'];
+    return definition;
+  }
+
 
 }

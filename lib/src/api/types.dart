@@ -1,14 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:meta/meta.dart';
 import 'package:tiecd/src/commands/umoci.dart';
-import 'package:tiecd/src/extensions.dart';
 
-
-import '../util.dart';
 import 'tiefile.dart';
-
+import '../util.dart';
+import '../extensions.dart';
 
 class Config {
   String target = '';
@@ -130,59 +127,39 @@ abstract class DeployHandler {
   String getDestinationImageName(Environment environment, Image image);
 }
 
-class ImageType {
-  ImageDefinition? _imageDefinition;
-
-
-}
 
 enum CIProvider { gitlab, github, unknown }
 
 abstract class ProjectProvider {
-  BuildType? _buildType;
-  String? _name;
-  String? _version;
-  CIProvider? _ciProvider;
+  BuildType? buildType;
+  ImageType? imageType;
+  String? name;
+  String? version;
+  CIProvider? ciProvider;
 
-  @protected
-  BuildType? get buildType => _buildType;
-  @protected
-  set buildType(BuildType? buildType) => _buildType = buildType;
-
-  @protected
-  String? get name => _name;
-  @protected
-  set name(String? name) => _name = name;
-
-  @protected
-  String? get version => _version;
-  @protected
-  set version(String? version) => _version = version;
-
-  @protected
-  CIProvider? get ciProvider => _ciProvider;
-  @protected
-  set ciProvider(CIProvider? ciProvider) => _ciProvider = ciProvider;
 
   ProjectProvider() {
     var test = Platform.environment['CI_PROJECT_NAME'];
     if (test.isNotNullNorEmpty) {
-      _ciProvider = CIProvider.gitlab;
+      ciProvider = CIProvider.gitlab;
     } else {
       test = Platform.environment['GITHUB_REPOSITORY'];
       if (test.isNotNullNorEmpty) {
-        _ciProvider = CIProvider.github;
+        ciProvider = CIProvider.github;
       }
     }
-    _ciProvider ??= CIProvider.unknown;
+    ciProvider ??= CIProvider.unknown;
   }
 
-  // image path of the continer registry for this project
+  void init();
+  bool isProject();
+
+  // image path of the container registry for this project
   // if the ci environment provides one
-  String? getImagePath() {
-    if (_ciProvider == CIProvider.gitlab) {
+  String? imagePath() {
+    if (ciProvider == CIProvider.gitlab) {
       return Platform.environment['CI_REGISTRY_IMAGE'];
-    } else if (_ciProvider == CIProvider.gitlab) {
+    } else if (ciProvider == CIProvider.gitlab) {
       if (Platform.environment['GITHUB_REPOSITORY'].isNotNullNorEmpty) {
         return 'ghcr.io/${Platform.environment['GITHUB_REPOSITORY']}';
       }
@@ -190,15 +167,9 @@ abstract class ProjectProvider {
     return null;
   }
 
-  void init();
-  bool isProject();
-
   List<String>? beforeBuildScripts();
   List<String>? buildScripts();
   List<String>? afterBuildScripts();
   Map<String,String> buildEnv();
-  String getBaseImage();
-  void copyArtifactsIntoImage(UmociCommand umoci);
-  List<String> getUmociOptions();
-  void expandImageDefinition(ImageDefinition definition);
+
 }
