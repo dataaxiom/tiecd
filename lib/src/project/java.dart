@@ -1,11 +1,9 @@
 import 'dart:io';
 import 'package:meta/meta.dart';
-import 'package:tiecd/src/extensions.dart';
 import 'package:xml/xml.dart';
 
 import '../api/tiefile.dart';
 import '../api/types.dart';
-import '../commands/umoci.dart';
 
 class JavaProject extends ProjectProvider {
 
@@ -167,6 +165,7 @@ class JavaProject extends ProjectProvider {
     if (buildType == BuildType.maven) {
       return ['mvn -B clean'];
     }
+    return null;
   }
 
   @override
@@ -174,10 +173,13 @@ class JavaProject extends ProjectProvider {
     if (buildType == BuildType.maven) {
       return ['mvn -B install'];
     }
+    return null;
   }
 
   @override
-  List<String>? afterBuildScripts() {}
+  List<String>? afterBuildScripts() {
+    return null;
+  }
 
   static ImageDefinition defaultImageDefinition() {
     ImageDefinition definition = ImageDefinition();

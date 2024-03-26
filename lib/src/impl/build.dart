@@ -27,7 +27,7 @@ class BuildExecutor extends BaseExecutor {
     if (projectProvider != null) {
       var project = projectProvider!;
       if (numberOfApps == 1) {
-        build.buildType ??= project.buildType;
+        build.type ??= project.buildType;
         build.beforeScripts ??= project.beforeBuildScripts();
         build.scripts ??= project.buildScripts();
         build.afterScripts ??= project.afterBuildScripts();
@@ -45,7 +45,7 @@ class BuildExecutor extends BaseExecutor {
     if (app.image != null &&  app.image!.type != null) {
       // get the image default image definition for that type and
       // merge it into the current image definition
-      var defaultDefinition = defaultImageDefinition(app.image!.type!);
+      var defaultDefinition = defaultImageDefinition(app.image!.type!, build.type);
       if (build.imageDefinition == null) {
         build.imageDefinition = defaultDefinition;
       } else if (defaultDefinition != null) {
@@ -161,6 +161,7 @@ class BuildExecutor extends BaseExecutor {
             for (var artifact in app.build!.imageDefinition!.copy!) {
               List<String> parts = artifact.split(' ');
               if (parts.length == 2) {
+                Log.info("copying ${parts[0]} to ${parts[1]}");
                 await umoci.copyDirectory(parts[0],parts[1]);
               } else {
                 Log.error("copy command doesn't have '<source> <destination>' format: $artifact" );
@@ -227,7 +228,7 @@ class BuildExecutor extends BaseExecutor {
             '--history.created_by=TieCD',
           ]);
 
-          Log.info("pushing image to repo");
+          Log.info("pushing ${app.image!.path!}");
           skopeo.reset();
           skopeo.initTargetRepo(buildContext.repositories,app.image!.path!);
           await skopeo.pushImageBuild(buildContext, '$ociPath:tiecd',

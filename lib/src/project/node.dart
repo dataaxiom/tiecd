@@ -3,7 +3,6 @@ import 'dart:io';
 
 import '../api/tiefile.dart';
 import '../api/types.dart';
-import '../commands/umoci.dart';
 import '../extensions.dart';
 
 class NodeProject extends ProjectProvider {
@@ -37,15 +36,6 @@ class NodeProject extends ProjectProvider {
   }
 
   @override
-  String baseImage() {
-    var version = Platform.environment['TIECD_NODE_VERSION'];
-    if (version.isNotNullNorEmpty) {
-      return 'node:$version-alpine';
-    }
-    return 'node:20-alpine';
-  }
-
-  @override
   List<String>? beforeBuildScripts() {
     if (buildType == BuildType.yarn) {
       return ['yarn --frozen-lockfile'];
@@ -53,6 +43,8 @@ class NodeProject extends ProjectProvider {
       return ['npm clean-install'];
     } else if (buildType == BuildType.pnpm) {
       return ['pnpm i --frozen-lockfile'];
+    } else {
+      return null;
     }
   }
   @override
@@ -63,6 +55,8 @@ class NodeProject extends ProjectProvider {
       return ['npm run build'];
     } else if (buildType == BuildType.pnpm) {
       return ['pnpm run build'];
+    } else {
+      return null;
     }
   }
   @override

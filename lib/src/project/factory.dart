@@ -1,4 +1,5 @@
 import 'package:tiecd/src/api/tiefile.dart';
+import 'package:tiecd/src/project/flutter.dart';
 import 'package:tiecd/src/project/java.dart';
 import 'package:tiecd/src/project/nextjs.dart';
 import 'package:tiecd/src/project/node.dart';
@@ -16,7 +17,6 @@ ProjectProvider? buildProject() {
     NextJSProject nextjs = NextJSProject();
     nextjs.init();
     if (nextjs.isProject()) {
-      print("is nextjs");
       return nextjs;
     }
   }
@@ -33,11 +33,17 @@ ProjectProvider? buildProject() {
     }
   }
 
+  FlutterProject flutter = FlutterProject();
+  flutter.init();
+  if (flutter.isProject()) {
+    return flutter;
+  }
+
   return null;
 }
 
 
-ImageDefinition? defaultImageDefinition(ImageType imageType) {
+ImageDefinition? defaultImageDefinition(ImageType imageType, BuildType? buildType) {
   ImageDefinition? definition;
   switch (imageType) {
     case (ImageType.springboot):
@@ -46,6 +52,11 @@ ImageDefinition? defaultImageDefinition(ImageType imageType) {
       return NodeProject.defaultImageDefinition();
     case (ImageType.nextjs):
       return NextJSProject.defaultImageDefinition();
+    case (ImageType.nginx): {
+      if (buildType == BuildType.flutter) {
+        return FlutterProject.defaultImageDefinition();
+      }
+    }
     default:
   }
   return definition;

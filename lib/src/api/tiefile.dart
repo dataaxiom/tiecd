@@ -212,7 +212,7 @@ class ImageDefinition {
 
 @JsonSerializable()
 class Build {
-  BuildType? buildType;
+  BuildType? type;
   List<Coordinate>? artifacts;
   List<String>? beforeScripts;
   List<String>? scripts;

@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../api/tiefile.dart';
-import '../commands/umoci.dart';
 import 'node.dart';
 
 class NextJSProject extends NodeProject {
