@@ -1,6 +1,6 @@
 ![alt text](https://raw.githubusercontent.com/dataaxiom/tiecd/main/docs/tiecd.png)
 
-## A simplified CICD toolchain for kubernetes deployments.
+## Pipeline tools for cloud deployments
 
 Tiecd is a collection of standard tools for building and deploying applications into kubernetes environments. It's bundled as a containerized solution itself, designed to run directly in CICD pipelines.  It ties together the standard tools for kubernetes deployments and provides a higher level abstraction DSL (domain specific language) around them.
 
@@ -32,19 +32,19 @@ There are three broad appoaches for deployments, directly providing the deployme
 
 ##### Provide Deployment Artifacts
 
-```
+```yaml
 environments:
 - apiConfig: ${KUBE_CONFIG_FILE}
 
 apps:
 - name: webapp
-  templateFiles:
+  manifests:
   - webapp.yml
 ```
 The above tie.yml file when executed will apply the webapp.yml file to the cluster specified in the environments section. It will call kubectl commands to apply the objects in the file and wait if necessary for their rollout. The webapp.yml would contain the kubernetes objects to be applied.
 
 ##### Generate Deployment Artifacts - TODO
-```
+```yaml
 environments:
 - apiConfig: ${KUBE_CONFIG_FILE}
 
@@ -66,7 +66,7 @@ tiecd deploy
 
 ##### Helm Deployments
 Helm carts can been described with associated values files direclty in a git repo. Tiecd will then execute these charts upon the cluster calling the helm commands and assocated kubectl commands. In conjuction with the standard tiecd funcionality it can provide a more complete helm deployment solution, providng for image moving, non helm artifacts (config/secrets/templates) and value expansion. 
-```
+```yaml
 apps:
 - name: grafana
   mountFiles:
@@ -74,12 +74,12 @@ apps:
   - file: dashboard/jvm.json
   secrets:
   - prometheus-ds.yml
-  helmCharts:
-  - url: "oci://registry-1.docker.io/bitnamicharts/grafana"
+  helmChart:
+    url: "oci://registry-1.docker.io/bitnamicharts/grafana"
     version: 9.0.3
     values:
     - grafana-values.yml
-  templatesFiles:
+  manifests:
   - route.yaml
 
 ```
@@ -92,12 +92,11 @@ Tiecd can build standard application images out of the box, using a dockerless b
 
 For example, to build a springboot application define the app in a tie.yml file:
 
-```
+```yaml
 apps:
 - name: helloworld
   image:
     type: springboot
-    baseVersion: jdk11
   artifacts:
   - groupId: hello.world.app
     artifactId: helloWorldApp
@@ -106,6 +105,6 @@ apps:
 
 then building the image can be done via:
 ```
-tiecd build image
+tiecd build
 ```
 

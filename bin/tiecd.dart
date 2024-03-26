@@ -273,7 +273,7 @@ class BuildCommand extends Command {
 
 Future<void> main(List<String> arguments) async {
   var runner = CommandRunner('tiecd',
-      'The CICD toolchain to simplify building and deploying applications into the cloud.');
+      'Pipeline tools for cloud deployments');
 
   runner.argParser.addOption('base-dir',
       abbr: 'b',
