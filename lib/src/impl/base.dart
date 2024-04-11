@@ -20,6 +20,7 @@ abstract class BaseExecutor {
   bool fileSubset = false;
   final Set<String> _fileList = {};
   final Set<String> _appList = {};
+  bool _appListDeployment = false;
   int _numberOfApps = 0; // for each processed file
 
   BaseExecutor(this._config) {
@@ -172,6 +173,7 @@ abstract class BaseExecutor {
       }
 
       if (_appList.isNotEmpty) {
+        _appListDeployment = true;
         var currentApps = 'apps to be deployed: ';
         for (var app in _appList) {
           currentApps += "$app,";
@@ -518,7 +520,7 @@ abstract class BaseExecutor {
                 }
                 // if we have an applist and it includes the app name or we are processing all apps which autoRun isn't false
                 if (_appList.isNotEmpty && _appList.contains(appName) ||
-                    _appList.isEmpty && (app.autoRun == null || app.autoRun!)) {
+                    !_appListDeployment && (app.autoRun == null || app.autoRun!)) {
                   // expand the app if necessary
                   Set<String> includedApps = {};
                   mergeApp(tieFile, app, includedApps);
@@ -535,12 +537,6 @@ abstract class BaseExecutor {
 
                   if (_appList.isNotEmpty) {
                     _appList.remove(appName);
-                  }
-                } else {
-                  // only throw error if we are using applist
-                  if (_appList.isEmpty) {
-                    throw TieError(
-                        'app name \'$appName\' does not exist in file $file');
                   }
                 }
               } on TieError catch (te) {
