@@ -83,16 +83,17 @@ class HelmCommand {
     if (namespace != null) {
       args.add("--namespace=$namespace");
     }
+    Map<String,String> env = deployContext.getEnv();
     if (helmChart.sets != null) {
       for (var setValue in helmChart.sets!) {
         args.add('--set');
-        args.add(varExpandByLineWithProperties(setValue, "", null));
+        args.add(varExpandByLineWithProperties(setValue, "", env));
       }
     }
     if (helmChart.values != null) {
       for (var valueFile in helmChart.values!) {
         // expand the file into a temporary file
-        var expanded = expandFileByName("${_config.baseDir}/$valueFile",null);
+        var expanded = expandFileByName("${_config.baseDir}/$valueFile", env);
         var fileName = valueFile.replaceAll("/","-");
         fileName = "${_config.scratchDir}/${_tempDir!}/$fileName";
         File(fileName).writeAsStringSync(expanded);
