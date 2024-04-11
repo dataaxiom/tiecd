@@ -43,16 +43,6 @@ class KubernetesHandler implements DeployHandler {
 
   @override
   Future<void> expandEnvironment(Environment environment) async {
-    // if apiConfigFile is set load it
-    if (environment.apiConfigFile != null) {
-      if (!File(environment.apiConfigFile!).existsSync()) {
-        throw TieError(
-            "api config file: ${environment.apiConfigFile} does not exist");
-      } else {
-        environment.apiConfig ??=
-            File(environment.apiConfigFile!).readAsStringSync();
-      }
-    }
 
     // if we have an apiConfig set to a KUBE_CONFIG file extract the values
     if (environment.apiConfig != null) {

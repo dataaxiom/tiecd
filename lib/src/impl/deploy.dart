@@ -21,6 +21,18 @@ class DeployExecutor extends BaseExecutor {
     return 'deploying';
   }
   void preExpandEnvironment(Environment environment) {
+
+    // if apiConfigFile is set load it
+    if (environment.apiConfigFile != null) {
+      if (!File(environment.apiConfigFile!).existsSync()) {
+        throw TieError(
+            "api config file: ${environment.apiConfigFile} does not exist");
+      } else {
+        environment.apiConfig ??=
+            File(environment.apiConfigFile!).readAsStringSync();
+      }
+    }
+
     // if we haven't and apiType and we have apiConfig set check if it's kubernetes
     if (environment.apiType == null && environment.apiConfig != null) {
       var kubeConfig = loadYaml(environment.apiConfig!);
