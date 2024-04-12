@@ -393,6 +393,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.1"
+  porter_2_stemmer:
+    dependency: transitive
+    description:
+      name: porter_2_stemmer
+      sha256: "40374d14165022a700797689eb159bd7baed701fc7c8ca9f39dd0945366b2ed3"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.2"
   posix:
     dependency: "direct main"
     description:
@@ -561,6 +569,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.0"
+  text_analysis:
+    dependency: "direct main"
+    description:
+      name: text_analysis
+      sha256: "61c8e8d2b25e651f53f77b0c28a7c91b5058c2cf2ee5617e793490705f12cea0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0+2"
   timing:
     dependency: transitive
     description:
