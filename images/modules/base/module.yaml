@@ -2,6 +2,9 @@ schema_version: 1
 version: 1.0.0
 name: base
 description: "Add the base packages and tiecd software and setup"
+envs:
+- name: DEBIAN_FRONTEND
+  value: noninteractive
 packages:
   manager: apt-get
   install:
