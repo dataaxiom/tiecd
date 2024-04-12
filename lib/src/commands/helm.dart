@@ -2,12 +2,14 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:tiecd/src/extensions.dart';
 import 'package:uuid/uuid.dart';
 
 import '../api/tiefile.dart';
 import '../api/types.dart';
 import '../log.dart';
 import '../util.dart';
+import '../util/command_splitter.dart';
 
 class HelmCommand {
 
@@ -84,12 +86,6 @@ class HelmCommand {
       args.add("--namespace=$namespace");
     }
     Map<String,String> env = deployContext.getEnv();
-    if (helmChart.sets != null) {
-      for (var setValue in helmChart.sets!) {
-        args.add('--set');
-        args.add(varExpandByLineWithProperties(setValue, "", env));
-      }
-    }
     if (helmChart.values != null) {
       for (var valueFile in helmChart.values!) {
         // expand the file into a temporary file
@@ -111,10 +107,13 @@ class HelmCommand {
         args.add(flag);
       }
     }
-    if (helmChart.args != null) {
-      for (var arg in helmChart.args!) {
-        args.add(arg);
-      }
+    if (helmChart.args.isNotNullNorEmpty) {
+        var argValue = varExpandByLineWithProperties(helmChart.args!, "", env);
+        var splitter = CommandlineSplitter();
+        var args = splitter.convert(argValue);
+        for (var arg in args) {
+          args.add(arg);
+        }
     }
     if (_config.traceCommands) {
       var outputString = 'helm ';

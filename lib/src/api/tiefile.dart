@@ -142,8 +142,7 @@ class HelmChart {
   String? chart;
   String? version;
   List<String>? values;
-  List<String>? sets;
-  List<String>? args;
+  String? args;
   String? namespace;
   List<String>? flags;
 
