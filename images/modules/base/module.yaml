@@ -16,6 +16,7 @@ packages:
     - umoci
     - unzip
     - lsb-release
+    - openssh-client
 artifacts:
   - name: "tiecd"
     path: "build/tiecd"
