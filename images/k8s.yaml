@@ -10,6 +10,7 @@ modules:
     - path: modules
   install:
     - name: base
+    - name: ytt
     - name: helm
     - name: google.package.repo
     - name: kubectl

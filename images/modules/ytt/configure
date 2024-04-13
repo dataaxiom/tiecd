@@ -1,0 +1,10 @@
+#!/bin/sh
+# Configure module
+set -e
+
+if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then
+  cp /tmp/artifacts/ytt-linux-arm64 /usr/bin/ytt
+else
+  cp /tmp/artifacts/ytt-linux-amd64 /usr/bin/ytt
+fi
+chmod +x /usr/bin/ytt

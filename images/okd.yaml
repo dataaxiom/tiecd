@@ -10,6 +10,7 @@ modules:
     - path: modules
   install:
     - name: base
+    - name: ytt
     - name: helm
     - name: okd.client
     - name: google.package.repo

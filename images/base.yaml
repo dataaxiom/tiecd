@@ -10,3 +10,4 @@ modules:
     - path: modules
   install:
     - name: base
+    - name: ytt
