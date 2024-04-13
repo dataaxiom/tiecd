@@ -108,11 +108,11 @@ class HelmCommand {
       }
     }
     if (helmChart.args.isNotNullNorEmpty) {
-        var argValue = varExpandByLineWithProperties(helmChart.args!, "", env);
+        var helmArgValue = varExpandByLineWithProperties(helmChart.args!, "", env);
         var splitter = CommandlineSplitter();
-        var args = splitter.convert(argValue);
-        for (var arg in args) {
-          args.add(arg);
+        var commandArgs = splitter.convert(helmArgValue);
+        for (var commandArg in commandArgs) {
+          args.add(commandArg);
         }
     }
     if (_config.traceCommands) {
