@@ -260,7 +260,7 @@ class KubernetesHandler implements DeployHandler {
         skopeoCmd.setTargetRepo(deployContext.environment.repository);
 
         var version = imagePath.version;
-        if (version.isNotNullNorEmpty) {
+        if (version.isNullOrEmpty) {
           version = "latest";
         }
         // get the sha for the image and setup deploy vars
