@@ -19,6 +19,7 @@ import '../commands/skopeo.dart';
 import '../log.dart';
 import '../util.dart';
 import '../extensions.dart';
+import '../util/image_tag.dart';
 
 class KubernetesHandler implements DeployHandler {
   final Config _config;
@@ -220,8 +221,8 @@ class KubernetesHandler implements DeployHandler {
 
   @override
   String getDestinationImageName(Environment environment, Image image) {
-    ImagePath imagePath = ImagePath(image.path!);
-    return '${environment.repository!.endpoint}/${imagePath.path}';
+    ImageTag imageTag = ImageTag(image.tag!);
+    return '${environment.registry!.host}/${imageTag.path}';
   }
 
   Future<String?> buildNamespace(DeployContext deployContext,
@@ -254,53 +255,52 @@ class KubernetesHandler implements DeployHandler {
     if (deployContext.app.image != null) {
       var skopeoCmd = SkopeoCommand(_config);
       var image = deployContext.app.image!;
-      if (image.path != null) {
-        ImagePath imagePath = ImagePath(image.path!);
-        skopeoCmd.initSourceRepo(deployContext.repositories, image.path!);
-        skopeoCmd.setTargetRepo(deployContext.environment.repository);
+      if (image.tag != null) {
+        ImageTag imageTag = ImageTag(image.tag!);
+        skopeoCmd.initSourceRepo(deployContext.registries, image.tag!);
+        skopeoCmd.setTargetRepo(deployContext.environment.registry);
 
-        var version = imagePath.version;
-        if (version.isNullOrEmpty) {
-          version = "latest";
+        var tag = imageTag.tag;
+        if (tag.isNullOrEmpty) {
+          tag = "latest";
         }
         // get the sha for the image and setup deploy vars
-        var sha = await skopeoCmd.imageSha(image.path!);
+        var sha = await skopeoCmd.imageSha(image.tag!);
 
         deployContext.app.tiecdEnv!['TIECD_IMAGE_SHA'] = sha;
-        deployContext.app.tiecdEnv!['TIECD_IMAGE_NAME'] = imagePath.name;
-        deployContext.app.tiecdEnv!['TIECD_IMAGE_VERSION'] = version;
+        deployContext.app.tiecdEnv!['TIECD_IMAGE_NAME'] = imageTag.name;
+        deployContext.app.tiecdEnv!['TIECD_IMAGE_TAG'] = tag;
         if (_config.verbose) {
           Log.info('adding TIECD_IMAGE_SHA to environment: $sha');
-          Log.info('adding TIECD_IMAGE_NAME to environment: ${imagePath.name}');
-          Log.info('adding TIECD_IMAGE_VERSION to environment: $version');
+          Log.info('adding TIECD_IMAGE_NAME to environment: ${imageTag.name}');
+          Log.info('adding TIECD_IMAGE_TAG to environment: $tag');
         }
-        var envImageName = imagePath.name
+        var envImageName = imageTag.name
             .toUpperCase()
             .replaceAll('-', "_")
             .replaceAll('/', '_');
         deployContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_SHA'] = sha;
         deployContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_NAME'] =
-            imagePath.name;
-        deployContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_VERSION'] =
-            version;
+            imageTag.name;
+        deployContext.app.tiecdEnv!['TIECD_IMAGE_${envImageName}_TAG'] =
+            tag;
 
         if (_config.verbose) {
           Log.info(
               'adding TIECD_IMAGE_${envImageName}_SHA to environment: $sha');
           Log.info(
-              'adding TIECD_IMAGE_${envImageName}_NAME to environment: ${imagePath.name}');
+              'adding TIECD_IMAGE_${envImageName}_NAME to environment: ${imageTag.name}');
           Log.info(
-              'adding TIECD_IMAGE_${envImageName}_VERSION to environment: $version');
+              'adding TIECD_IMAGE_${envImageName}_TAG to environment: $tag');
         }
 
         // push the image if setup
-        if (deployContext.environment.repository != null &&
-            deployContext.environment.repository!.mode == ImageMode.push &&
-            deployContext.environment.repository!.endpoint != null) {
+        if (deployContext.environment.registry != null &&
+            deployContext.environment.registry!.host != null) {
           var destImageName =
           getDestinationImageName(deployContext.environment, image);
-          var fullDestImageName = "$destImageName:$version";
-          await skopeoCmd.deployImage(image.path!, fullDestImageName);
+          var fullDestImageName = "$destImageName:$tag";
+          await skopeoCmd.deployImage(image.tag!, fullDestImageName);
         }
       } else {
         throw TieError('Image path is missing');

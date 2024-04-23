@@ -192,25 +192,25 @@ Future<Config> buildConfig(final ArgResults argResults) async {
   config.ignoreErrors =
       setupBoolValue(argResults['ignore-errors'], 'TIECD_IGNORE_ERRORS');
   config.verbose = setupBoolValue(argResults['verbose'], 'TIECD_VERBOSE');
-  config.traceGenerated =
-      setupBoolValue(argResults['trace-generated'], 'TIECD_TRACE_GENERATED');
-  config.traceTieFile =
-      setupBoolValue(argResults['trace-tie-file'], 'TIECD_TRACE_TIE_FILE');
-  config.traceCommands =
-      setupBoolValue(argResults['trace-commands'], 'TIECD_TRACE_COMMANDS');
-  // verbose mode overrides
   if (config.verbose) {
     config.traceTieFile = true;
     config.traceCommands = true;
     config.traceGenerated = true;
+  }
+  if (argResults.wasParsed('trace-generated')) {
+    config.traceGenerated = setupBoolValue(argResults['trace-generated'], 'TIECD_TRACE_GENERATED');
+  }
+  if (argResults.wasParsed('trace-tie-file')) {
+    config.traceTieFile = setupBoolValue(argResults['trace-tie-file'], 'TIECD_TRACE_TIE_FILE');
+  }
+  if (argResults.wasParsed('trace-commands')) {
+    config.traceCommands = setupBoolValue(argResults['trace-commands'], 'TIECD_TRACE_COMMANDS');
   }
   config.secretLabels =
       setupStringValue(argResults['secret-labels'], 'TIECD_SECRET_LABELS');
   config.banner = setupBoolValue(argResults['banner'], 'TIECD_BANNER');
   config.createNamespaces = setupBoolValue(
       argResults['create-namespaces'], 'TIECD_CREATE_NAMESPACES');
-
-
 
   // post config init
   var secetLabels = config.secretLabels.split('|');
@@ -318,13 +318,10 @@ Future<void> main(List<String> arguments) async {
       help:
           'Increase logging to include all tracing and additional informational logging');
   runner.argParser.addFlag('trace-generated',
-      defaultsTo: false,
       help: 'Log generated artifacts [env: TIECD_TRACE_GENERATED]');
   runner.argParser.addFlag('trace-tie-file',
-      defaultsTo: false,
       help: 'Log generated and expanded tie files [env: TIECD_TRACE_TIE_FILE]');
   runner.argParser.addFlag('trace-commands',
-      defaultsTo: false,
       help: 'Log executed commands [env: TIECD_TRACE_COMMANDS]');
   runner.argParser.addOption('secret-labels',
       defaultsTo: 'pass|secret|token|key|cert',

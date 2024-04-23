@@ -242,54 +242,6 @@ Future<void> runScript(TieContext tieContext, String script,
   }
 }
 
-// url could be different formats
-// node:20-alpine
-// bitnami/postgresql:latest
-// registry.gitlab.com/dataaxiom/node:20-alpine
-class ImagePath {
-  String endpoint = '';
-  String path = '';
-  String name = '';
-  String version = '';
-  bool isSha = false;
-
-  ImagePath(String url) {
-    List<String> parts = url.split('/');
-    if (parts.length > 1) {
-      if (parts[0].contains('.')) {
-        // we assume first part is hostname
-        endpoint = parts[0];
-        initVersion(url.substring(endpoint.length + 1));
-      } else {
-        initVersion(url);
-      }
-    } else {
-      initVersion(url);
-    }
-  }
-
-  void initVersion(String image) {
-    List<String> parts = [];
-    if (image.contains('@')) {
-      parts = image.split('@');
-      isSha = true;
-    } else {
-      parts = image.split(':');
-    }
-    if (parts.length == 2) {
-      path = parts[0];
-      version = parts[1];
-    } else {
-      path = image;
-      version = 'latest';
-    }
-    if (path.contains('/')) {
-      name = path.substring(path.lastIndexOf('/') + 1);
-    } else {
-      name = path;
-    }
-  }
-}
 
 // Get the home directory or null if unknown.
 String? homeDirectory() {

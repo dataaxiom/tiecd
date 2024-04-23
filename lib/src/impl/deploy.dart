@@ -77,6 +77,30 @@ class DeployExecutor extends BaseExecutor {
     return environments;
   }
 
+  DeployHandler buildEnvironment(Environment environment) {
+    DeployHandler handler;
+    preExpandEnvironment(environment);
+    if (environment.apiType == null) {
+      Log.printObject(config,'environment', 'Environment in use:', environment.toJson());
+      throw TieError('provider type is not set');
+    } else if (environment.apiType == "kubernetes") {
+      if (environment.apiProvider == "gke") {
+        handler = GKEHandler(config);
+      } else if (environment.apiProvider == "eks") {
+        handler = EKSHandler(config);
+      } else {
+        handler = KubernetesHandler(config);
+      }
+    } else {
+      Log.printObject(config, 'environment', 'Environment in use:', environment.toJson());
+      throw TieError(
+          'provider ${environment.apiType} type is not supported');
+    }
+
+    handler.expandEnvironment(environment);
+    return handler;
+  }
+
   @override
   execute(Tie tieFile, App app) async {
     if (tieFile.environments != null && tieFile.environments!.isNotEmpty) {
@@ -85,43 +109,28 @@ class DeployExecutor extends BaseExecutor {
       List<Environment> environments =
           processEnvironments(tieFile.environments!);
 
+      if (config.traceTieFile) {
+        Log.info('Environments in use:');
+        for (var environment in environments) {
+          environment = environment.clone();
+          Log.printObject(config, 'environment', '',
+              environment.toJson());
+        }
+      }
+
       for (var environment in environments) {
         // lets take a clone copy to expand on that, to not effect the original
         // on the next app round - simplifies expansion logic
         environment = environment.clone();
-
-        preExpandEnvironment(environment);
-        DeployHandler handler;
-        if (environment.apiType == null) {
-          Log.printObject(config,'environment', 'Environment in use:', environment.toJson());
-          throw TieError('provider type is not set');
-        } else if (environment.apiType == "kubernetes") {
-          if (environment.apiProvider == "gke") {
-            handler = GKEHandler(config);
-          } else if (environment.apiProvider == "eks") {
-            handler = EKSHandler(config);
-          } else {
-            handler = KubernetesHandler(config);
-          }
-        } else {
-          Log.printObject(config, 'environment', 'Environment in use:', environment.toJson());
-          throw TieError(
-              'provider ${environment.apiType} type is not supported');
-        }
-
-        handler.expandEnvironment(environment);
-
-        if (config.traceTieFile) {
-          Log.printObject(config,'environment', 'Environment in use:', environment.toJson());
-        }
+        DeployHandler handler = buildEnvironment(environment);
 
         Log.green(
             'processing app "${app.name!}" on ${environment.name!} environment');
-        List<ImageRepository> imageRepositories = [];
-        if (tieFile.repositories?.image != null) {
-          imageRepositories = tieFile.repositories!.image!;
+        List<ImageRegistry> imageReregistries = [];
+        if (tieFile.registries != null) {
+          imageReregistries = tieFile.registries!;
         }
-        var context = DeployContext(config, imageRepositories, handler, environment, app);
+        var context = DeployContext(config, imageReregistries, handler, environment, app);
         var namespace = findNamespace(context);
         app.tiecdEnv ??= {};
 

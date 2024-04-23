@@ -11,6 +11,7 @@ import '../project/factory.dart';
 import '../util.dart';
 import '../api/tiefile.dart';
 import 'base.dart';
+import '../util/image_tag.dart';
 
 class BuildExecutor extends BaseExecutor {
   BuildExecutor(super._config);
@@ -34,7 +35,7 @@ class BuildExecutor extends BaseExecutor {
 
         if (app.image != null) {
           app.image!.type ??= project.imageType;
-          app.image!.path ??= projectProvider!.imagePath();
+          app.image!.tag ??= projectProvider!.imagePath();
         }
       } else {
         Log.info(
@@ -108,9 +109,9 @@ class BuildExecutor extends BaseExecutor {
 
   @override
   execute(Tie tieFile, App app) async {
-    List<ImageRepository> imageRepositories = [];
-    if (tieFile.repositories != null && tieFile.repositories!.image != null) {
-      imageRepositories = tieFile.repositories!.image!;
+    List<ImageRegistry> imageReregistries = [];
+    if (tieFile.registries != null) {
+      imageReregistries = tieFile.registries!;
     }
 
     if (projectProvider != null) {
@@ -120,7 +121,7 @@ class BuildExecutor extends BaseExecutor {
       if (config.traceTieFile) {
         Log.printArray(config,'apps', null, app.toJson());
       }
-      BuildContext buildContext = BuildContext(config, imageRepositories, app);
+      BuildContext buildContext = BuildContext(config, imageReregistries, app);
       var buildEnv = project.buildEnv();
       buildContext.app.tiecdEnv ??= {};
       buildEnv.forEach((key, value) => buildContext.app.tiecdEnv![key] = value);
@@ -142,21 +143,21 @@ class BuildExecutor extends BaseExecutor {
         }
       }
 
-      if (app.image != null && app.image!.path != null && app.build!.imageDefinition != null) {
+      if (app.image != null && app.image!.tag != null && app.build!.imageDefinition != null) {
         Log.info('building app image');
         var umoci = UmociCommand(config);
         var skopeo = SkopeoCommand(config);
         var baseImage = app.build!.imageDefinition!.from!;
-        var imageUrl = ImagePath(baseImage);
+        var imageUrl = ImageTag(baseImage);
         var ociPath = imageUrl.path;
         if (ociPath.contains('/')) {
           ociPath = ociPath.substring(ociPath.lastIndexOf('/') + 1);
         }
         try {
           Log.info('pulling image: $baseImage');
-          skopeo.initSourceRepo(buildContext.repositories, baseImage);
+          skopeo.initSourceRepo(buildContext.registries, baseImage);
           await skopeo.pullImageForBuild(baseImage);
-          await umoci.unpack('$ociPath:${imageUrl.version}');
+          await umoci.unpack('$ociPath:${imageUrl.tag}');
           if (app.build!.imageDefinition!.copy != null) {
             for (var artifact in app.build!.imageDefinition!.copy!) {
               List<String> parts = artifact.split(' ');
@@ -171,7 +172,7 @@ class BuildExecutor extends BaseExecutor {
           await umoci.repack('$ociPath:tiecd');
           List<String> options = [];
           // carry old config to new image
-          var config = await skopeo.ociInspect('$ociPath:${imageUrl.version}');
+          var config = await skopeo.ociInspect('$ociPath:${imageUrl.tag}');
           if (config.isNotNullNorEmpty) {
             var doc = jsonDecode(config);
             if (doc["config"] != null) {
@@ -228,11 +229,11 @@ class BuildExecutor extends BaseExecutor {
             '--history.created_by=TieCD',
           ]);
 
-          Log.info("pushing ${app.image!.path!}");
+          Log.info("pushing ${app.image!.tag!}");
           skopeo.reset();
-          skopeo.initTargetRepo(buildContext.repositories,app.image!.path!);
+          skopeo.initTargetRepo(buildContext.registries,app.image!.tag!);
           await skopeo.pushImageBuild(buildContext, '$ociPath:tiecd',
-              app.image!.path!);
+              app.image!.tag!);
         } catch (error) {
           Log.error("got error building");
           rethrow;
@@ -240,7 +241,7 @@ class BuildExecutor extends BaseExecutor {
           try {
             Log.info("cleaning up image build");
             await umoci.cleanup('$ociPath:tiecd');
-            await umoci.cleanup('$ociPath:${imageUrl.version}');
+            await umoci.cleanup('$ociPath:${imageUrl.tag}');
             if (Directory(ociPath).existsSync()) {
               Directory(ociPath).deleteSync(recursive: true);
             }

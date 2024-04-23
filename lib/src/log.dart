@@ -58,4 +58,20 @@ class Log {
     print(json2yaml(wrapper));
     print('---');
   }
+
+  static void printList(Config config, String name, String? message, List contents) {
+    if (message.isNotNullNorEmpty) {
+      Log.info(message!);
+    }
+    print('---');
+    for (Map element in contents) {
+      List<Map> array = [element];
+      Map<String, dynamic> wrapper = {};
+      wrapper[name] = array;
+      sanitizeDoc(config, wrapper);
+      print(json2yaml(wrapper));
+    }
+    print('---');
+  }
+
 }

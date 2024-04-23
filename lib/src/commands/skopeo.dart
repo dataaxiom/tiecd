@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:tiecd/src/extensions.dart';
-
+import '../extensions.dart';
 import '../api/tiefile.dart';
 import '../api/types.dart';
 import '../log.dart';
-import '../util.dart';
+import '../util/image_tag.dart';
 
 class SkopeoCommand {
   final Config _config;
@@ -33,66 +32,66 @@ class SkopeoCommand {
     destinationTlsVerify = null;
   }
 
-  void initSourceRepo(List<ImageRepository>? imageRepositories, String image) {
+  void initSourceRepo(List<ImageRegistry>? imageRegistries, String srcImage) {
     // check if there is a repository matching the host - setup the auth
-    if (imageRepositories != null) {
-      ImageRepository? imageRepository;
-      if (image.isNotNullNorEmpty) {
-        ImagePath imagePath = ImagePath(image);
-        for (var registry in imageRepositories) {
-          if (imagePath.endpoint == registry.endpoint) {
-            imageRepository = registry;
+    if (imageRegistries != null) {
+      ImageRegistry? imageRegistry;
+      if (srcImage.isNotNullNorEmpty) {
+        ImageTag imageTag = ImageTag(srcImage);
+        for (var registry in imageRegistries) {
+          if (imageTag.host == registry.host) {
+            imageRegistry = registry;
             break;
           }
         }
       }
-      if (imageRepository != null) {
-        if (imageRepository.username.isNotNullNorEmpty) {
-          sourceUsername = imageRepository.username!;
+      if (imageRegistry != null) {
+        if (imageRegistry.username.isNotNullNorEmpty) {
+          sourceUsername = imageRegistry.username!;
         }
-        if (imageRepository.password != null) {
-          sourcePassword = imageRepository.password!;
-        } else if (imageRepository.token.isNotNullNorEmpty) {
-          sourceToken = imageRepository.token!;
+        if (imageRegistry.password != null) {
+          sourcePassword = imageRegistry.password!;
+        } else if (imageRegistry.token.isNotNullNorEmpty) {
+          sourceToken = imageRegistry.token!;
         }
-        if (imageRepository.tlsVerify != null) {
-          sourceTlsVerify = imageRepository.tlsVerify!;
+        if (imageRegistry.tlsVerify != null) {
+          sourceTlsVerify = imageRegistry.tlsVerify!;
         }
       }
     }
   }
 
-  void initTargetRepo(List<ImageRepository>? imageRepositories, String image) {
-    if (imageRepositories != null) {
-      ImageRepository? imageRepository;
-      if (image.isNotNullNorEmpty) {
-        ImagePath imagePath = ImagePath(image);
-        for (var registry in imageRepositories) {
-          if (imagePath.endpoint == registry.endpoint) {
-            imageRepository = registry;
+  void initTargetRepo(List<ImageRegistry>? imageRegistries, String targetImage) {
+    if (imageRegistries != null) {
+      ImageRegistry? imageRegistry;
+      if (targetImage.isNotNullNorEmpty) {
+        ImageTag imageTag = ImageTag(targetImage);
+        for (var registry in imageRegistries) {
+          if (imageTag.host == registry.host) {
+            imageRegistry = registry;
             break;
           }
         }
       }
-      if (imageRepository != null) {
-        setTargetRepo(imageRepository);
+      if (imageRegistry != null) {
+        setTargetRepo(imageRegistry);
       }
     }
   }
 
-  void setTargetRepo(ImageRepository? imageRepository) {
-    if (imageRepository != null) {
-      if (imageRepository.username.isNotNullNorEmpty) {
-        destinationUsername = imageRepository.username!;
+  void setTargetRepo(ImageRegistry? imageRegistry) {
+    if (imageRegistry != null) {
+      if (imageRegistry.username.isNotNullNorEmpty) {
+        destinationUsername = imageRegistry.username!;
       }
-      if (imageRepository.password.isNotNullNorEmpty) {
-        destinationPassword = imageRepository.password!;
+      if (imageRegistry.password.isNotNullNorEmpty) {
+        destinationPassword = imageRegistry.password!;
       }
-      if (imageRepository.token.isNotNullNorEmpty) {
-        destinationToken = imageRepository.token!;
+      if (imageRegistry.token.isNotNullNorEmpty) {
+        destinationToken = imageRegistry.token!;
       }
-      if (imageRepository.tlsVerify != null) {
-        destinationTlsVerify = imageRepository.tlsVerify!;
+      if (imageRegistry.tlsVerify != null) {
+        destinationTlsVerify = imageRegistry.tlsVerify!;
       }
     }
   }
@@ -223,7 +222,7 @@ class SkopeoCommand {
         'copy',
       ];
       var outputString = 'skopeo copy';
-      var imageUrl = ImagePath(sourceImage);
+      var imageTag = ImageTag(sourceImage);
       if (sourceUsername.isNotNullNorEmpty &&
           sourcePassword.isNotNullNorEmpty) {
         args.add('--src-creds');
@@ -245,14 +244,8 @@ class SkopeoCommand {
       }
       args.add('docker://$sourceImage');
       outputString += ' docker://$sourceImage';
-      // just use last part of multi path for oci image name
-      var strippedPath = imageUrl.path;
-      if (strippedPath.contains('/')) {
-        strippedPath =
-            strippedPath.substring(strippedPath.lastIndexOf('/') + 1);
-      }
-      args.add('oci:$strippedPath:${imageUrl.version}');
-      outputString += ' oci:$strippedPath:${imageUrl.version}';
+      args.add('oci:${imageTag.name}:${imageTag.tag}');
+      outputString += ' oci:${imageTag.name}:${imageTag.tag}';
 
       if (_config.traceCommands) {
         Log.info(outputString);
@@ -300,8 +293,8 @@ class SkopeoCommand {
       }
 
       String image = destinationImage;
-      ImagePath imagePath = ImagePath(destinationImage);
-      if (imagePath.version == '') {
+      ImageTag imageTag = ImageTag(destinationImage);
+      if (imageTag.tag == '') {
         image = '$destinationImage:latest';
       }
       args.add('oci:$sourceImage');

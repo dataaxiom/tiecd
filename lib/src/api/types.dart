@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:tiecd/src/commands/umoci.dart';
-
 import 'tiefile.dart';
 import '../util.dart';
 import '../extensions.dart';
@@ -37,10 +35,10 @@ class TieError implements Exception {
 
 class TieContext {
   Config config;
-  List<ImageRepository> repositories;
+  List<ImageRegistry> registries;
   App app;
 
-  TieContext(this.config, this.repositories, this.app);
+  TieContext(this.config, this.registries, this.app);
 
   Map<String, String> getEnv() {
     // build properties
@@ -83,13 +81,13 @@ class DeployContext extends TieContext {
   DeployHandler handler;
   Environment environment;
 
-  DeployContext(super.config, super.repositories, this.handler, this.environment, super.app);
+  DeployContext(super.config, super.registries, this.handler, this.environment, super.app);
 
 }
 
 class BuildContext extends TieContext {
 
-  BuildContext(super.config, super.repositories, super.app);
+  BuildContext(super.config, super.registries, super.app);
 
 }
 

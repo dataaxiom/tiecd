@@ -229,21 +229,12 @@ abstract class BaseExecutor {
         }
       }
 
-      if (tieIncludeFile.repositories != null) {
-        if (tieIncludeFile.repositories!.image != null) {
-          tieFile.repositories ??= Repositories();
-          tieFile.repositories!.image ??= [];
-          for (var imageRepo in tieIncludeFile.repositories!.image!) {
-            tieFile.repositories!.image!.add(imageRepo);
+      if (tieIncludeFile.registries != null) {
+          tieFile.registries ??= [];
+          for (var imageRegistry in tieIncludeFile.registries!) {
+            tieFile.registries!.add(imageRegistry);
           }
-        }
-        if (tieIncludeFile.repositories!.maven != null) {
-          tieFile.repositories ??= Repositories();
-          tieFile.repositories!.maven ??= [];
-          for (var mavenRepo in tieIncludeFile.repositories!.maven!) {
-            tieFile.repositories!.maven!.add(mavenRepo);
-          }
-        }
+
       }
 
       if (tieIncludeFile.environments != null) {
@@ -425,29 +416,28 @@ abstract class BaseExecutor {
   }
 
   // Inject default repos - gitlab/github currently supported
-  void expandImageRepos(Tie tieFile) {
-    Map<String, ImageRepository> reposByEndpoint = {};
+  void expandImageRegistries(Tie tieFile) {
+    Map<String, ImageRegistry> reposByHost = {};
 
-    if (tieFile.repositories != null && tieFile.repositories!.image != null) {
-      for (ImageRepository repo in tieFile.repositories!.image!) {
-        if (repo.endpoint.isNotNullNorEmpty) {
-          reposByEndpoint[repo.endpoint!] = repo;
+    if (tieFile.registries != null) {
+      for (ImageRegistry registry in tieFile.registries!) {
+        if (registry.host.isNotNullNorEmpty) {
+          reposByHost[registry.host!] = registry;
         }
       }
     }
 
     // add gitlab
-    String? gitlabRepo = Platform.environment["CI_REGISTRY"];
-    if (gitlabRepo.isNotNullNorEmpty) {
-      if (!reposByEndpoint.containsKey(gitlabRepo)) {
-        var gitlab = ImageRepository();
-        gitlab.endpoint = gitlabRepo;
+    String? gitlabRegistry = Platform.environment["CI_REGISTRY"];
+    if (gitlabRegistry.isNotNullNorEmpty) {
+      if (!reposByHost.containsKey(gitlabRegistry)) {
+        var gitlab = ImageRegistry();
+        gitlab.host = gitlabRegistry;
         gitlab.username = Platform.environment["CI_REGISTRY_USER"];
         gitlab.password = Platform.environment["CI_JOB_TOKEN"];
         // add it
-        tieFile.repositories ??= Repositories();
-        tieFile.repositories!.image ??= [];
-        tieFile.repositories!.image!.add(gitlab);
+        tieFile.registries ??= [];
+        tieFile.registries!.add(gitlab);
       }
     }
 
@@ -458,22 +448,24 @@ abstract class BaseExecutor {
     if (githubRepository.isNotNullNorEmpty &&
         githubActor.isNotNullNorEmpty &&
         githubToken.isNotNullNorEmpty) {
-      String githubImage = 'ghcr.io/$githubRepository';
-      if (!reposByEndpoint.containsKey(githubImage)) {
-        var gitlab = ImageRepository();
-        gitlab.endpoint = githubImage;
-        gitlab.username = githubActor;
-        gitlab.password = githubToken;
+      String ghcr = 'ghcr.io';
+      if (!reposByHost.containsKey(ghcr)) {
+        var githubRegistry = ImageRegistry();
+        githubRegistry.host = ghcr;
+        githubRegistry.username = githubActor;
+        githubRegistry.password = githubToken;
         // add it
-        tieFile.repositories ??= Repositories();
-        tieFile.repositories!.image ??= [];
-        tieFile.repositories!.image!.add(gitlab);
+        tieFile.registries ??= [];
+        tieFile.registries!.add(githubRegistry);
       }
     }
 
-    if (tieFile.repositories != null && _config.traceTieFile) {
-      Log.printObject(config,
-          'repository', 'Repositories in use:', tieFile.repositories!.toJson());
+    if (tieFile.registries != null && _config.traceTieFile) {
+      List<Map> mapList = [];
+      for (ImageRegistry registry in tieFile.registries!) {
+        mapList.add(registry.toJson());
+      }
+      Log.printList(config, 'registry', 'Registries in use:', mapList);
     }
   }
 
@@ -488,7 +480,7 @@ abstract class BaseExecutor {
           Tie tieFile = Tie();
           mergeFile(tieFile, file, includedFiles);
 
-          expandImageRepos(tieFile);
+          expandImageRegistries(tieFile);
 
           if (tieFile.apps == null) {
             if (projectProvider != null) {

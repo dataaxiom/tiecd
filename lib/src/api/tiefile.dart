@@ -14,20 +14,17 @@ class Proxy {
   Map<String, dynamic> toJson() => _$ProxyToJson(this);
 }
 
-enum ImageMode { push, pull }
-
 @JsonSerializable()
-class ImageRepository {
-  String? endpoint;
+class ImageRegistry {
+  String? host;
   String? username;
   String? password;
   String? token;
   bool? tlsVerify;
-  ImageMode? mode;
 
-  ImageRepository();
-  factory ImageRepository.fromJson(Map json) => _$ImageRepositoryFromJson(json);
-  Map<String, dynamic> toJson() => _$ImageRepositoryToJson(this);
+  ImageRegistry();
+  factory ImageRegistry.fromJson(Map json) => _$ImageRegistryFromJson(json);
+  Map<String, dynamic> toJson() => _$ImageRegistryToJson(this);
 }
 
 @JsonSerializable()
@@ -40,16 +37,6 @@ class MavenRepository {
   MavenRepository();
   factory MavenRepository.fromJson(Map json) => _$MavenRepositoryFromJson(json);
   Map<String, dynamic> toJson() => _$MavenRepositoryToJson(this);
-}
-
-@JsonSerializable()
-class Repositories {
-  List<ImageRepository>? image;
-  List<MavenRepository>? maven;
-
-  Repositories();
-  factory Repositories.fromJson(Map json) => _$RepositoriesFromJson(json);
-  Map<String, dynamic> toJson() => _$RepositoriesToJson(this);
 }
 
 @JsonSerializable()
@@ -86,7 +73,7 @@ class Environment {
   String? secretAccessKey;
 
   String? namespace;
-  ImageRepository? repository;
+  ImageRegistry? registry;
 
   Environment();
   factory Environment.fromJson(Map json) => _$EnvironmentFromJson(json);
@@ -117,7 +104,7 @@ class Environment {
     clone.accessKey = accessKey;
     clone.secretAccessKey = secretAccessKey;
     clone.namespace = namespace;
-    clone.repository = repository; // not a deep copy
+    clone.registry = registry; // not a deep copy
     return clone;
   }
 }
@@ -126,9 +113,8 @@ enum Action { install, uninstall }
 
 @JsonSerializable()
 class Image {
-  String? path;
+  String? tag;
   ImageType? type;
-  ImageMode? imageMode;
 
   Image();
   factory Image.fromJson(Map json) => _$ImageFromJson(json);
@@ -288,7 +274,7 @@ class Tie {
   String? version;
   List<String>? includes;
   Proxy? proxy;
-  Repositories? repositories;
+  List<ImageRegistry>? registries;
   List<Environment>? environments;
   List<App>? apps;
 
