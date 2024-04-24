@@ -149,15 +149,12 @@ class BuildExecutor extends BaseExecutor {
         var skopeo = SkopeoCommand(config);
         var baseImage = app.build!.imageDefinition!.from!;
         var imageUrl = ImageTag(baseImage);
-        var ociPath = imageUrl.path;
-        if (ociPath.contains('/')) {
-          ociPath = ociPath.substring(ociPath.lastIndexOf('/') + 1);
-        }
+        var imageName = imageUrl.name;
         try {
           Log.info('pulling image: $baseImage');
           skopeo.initSourceRepo(buildContext.registries, baseImage);
           await skopeo.pullImageForBuild(baseImage);
-          await umoci.unpack('$ociPath:${imageUrl.tag}');
+          await umoci.unpack('$imageName:${imageUrl.tag}');
           if (app.build!.imageDefinition!.copy != null) {
             for (var artifact in app.build!.imageDefinition!.copy!) {
               List<String> parts = artifact.split(' ');
@@ -169,10 +166,10 @@ class BuildExecutor extends BaseExecutor {
               }
             }
           }
-          await umoci.repack('$ociPath:tiecd');
+          await umoci.repack('$imageName:tiecd');
           List<String> options = [];
           // carry old config to new image
-          var config = await skopeo.ociInspect('$ociPath:${imageUrl.tag}');
+          var config = await skopeo.ociInspect('$imageName:${imageUrl.tag}');
           if (config.isNotNullNorEmpty) {
             var doc = jsonDecode(config);
             if (doc["config"] != null) {
@@ -222,7 +219,7 @@ class BuildExecutor extends BaseExecutor {
             options
                 .add('--history.author=${app.build!.imageDefinition!.author}');
           }
-          await umoci.config('$ociPath:tiecd', [
+          await umoci.config('$imageName:tiecd', [
             ...options,
             '--config.label=tiecd.image.base=$baseImage',
             '--history.comment=TieCD umoci image build',
@@ -232,7 +229,7 @@ class BuildExecutor extends BaseExecutor {
           Log.info("pushing ${app.image!.tag!}");
           skopeo.reset();
           skopeo.initTargetRepo(buildContext.registries,app.image!.tag!);
-          await skopeo.pushImageBuild(buildContext, '$ociPath:tiecd',
+          await skopeo.pushImageBuild(buildContext, '$imageName:tiecd',
               app.image!.tag!);
         } catch (error) {
           Log.error("got error building");
@@ -240,10 +237,10 @@ class BuildExecutor extends BaseExecutor {
         } finally {
           try {
             Log.info("cleaning up image build");
-            await umoci.cleanup('$ociPath:tiecd');
-            await umoci.cleanup('$ociPath:${imageUrl.tag}');
-            if (Directory(ociPath).existsSync()) {
-              Directory(ociPath).deleteSync(recursive: true);
+            await umoci.cleanup('$imageName:tiecd');
+            await umoci.cleanup('$imageName:${imageUrl.tag}');
+            if (Directory(imageName).existsSync()) {
+              Directory(imageName).deleteSync(recursive: true);
             }
           } catch (error) {
             Log.error("error cleaning up image $error");

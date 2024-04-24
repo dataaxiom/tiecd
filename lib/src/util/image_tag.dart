@@ -7,23 +7,27 @@ import 'package:tiecd/src/extensions.dart';
 
 class ImageTag {
   String? host;
-  String repository = '';
+  String? repository;
   String name = '';
   String tag = '';
   bool isSha = false;
 
-  ImageTag(String iamgeTag) {
-    List<String> parts = iamgeTag.split('/');
+  ImageTag(String imageTag) {
+    List<String> parts = imageTag.split('/');
     if (parts.length > 1) {
       if (parts[0].contains('.')) {
         // we assume first part is hostname
         host = parts[0];
-        initVersion(iamgeTag.substring(host!.length + 1));
+        initVersion(imageTag.substring(host!.length + 1));
       } else {
-        initVersion(iamgeTag);
+        initVersion(imageTag);
       }
     } else {
-      initVersion(iamgeTag);
+      initVersion(imageTag);
+    }
+    // set to default
+    if (host.isNullOrEmpty) {
+      host = 'registry-1.docker.io';
     }
   }
 
@@ -36,16 +40,21 @@ class ImageTag {
       parts = imageTag.split(':');
     }
     if (parts.length == 2) {
-      repository = parts[0];
+      if (parts[0].contains('/')) {
+        repository = parts[0].substring(0, parts[0].lastIndexOf('/'));
+        name = parts[0].substring(parts[0].lastIndexOf('/') + 1);
+      } else {
+        name = parts[0];
+      }
       tag = parts[1];
     } else {
-      repository = imageTag;
+      if (imageTag.contains('/')) {
+        repository = imageTag.substring(0, imageTag.lastIndexOf('/'));
+        name = imageTag.substring(imageTag.lastIndexOf('/') + 1);
+      } else {
+        name = imageTag;
+      }
       tag = 'latest';
-    }
-    if (repository.contains('/')) {
-      name = repository.substring(repository.lastIndexOf('/') + 1);
-    } else {
-      name = repository;
     }
   }
 
@@ -53,7 +62,7 @@ class ImageTag {
     if (repository.isNotNullNorEmpty) {
       return '$repository/$name';
     } else {
-      return '';
+      return name;
     }
   }
 }

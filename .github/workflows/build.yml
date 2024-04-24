@@ -22,6 +22,8 @@ jobs:
       run: dart pub run flutter_oss_licenses:generate.dart -o oss_licenses.json --json
     - name: Dart build
       run: dart run build_runner build
+    - name: Dart tests
+      run: dart test test
     - name: Dart executable build
       run: dart compile exe bin/tiecd.dart -o bin/tiecd
     - name: Upload artifacts
@@ -44,6 +46,8 @@ jobs:
       run: dart pub run flutter_oss_licenses:generate.dart -o oss_licenses.json --json
     - name: Dart build
       run: dart run build_runner build
+    - name: Dart tests
+      run: dart test test
     - name: Dart executable build
       run: dart compile exe bin/tiecd.dart -o bin/tiecd.arm64
     - name: Upload artifacts
