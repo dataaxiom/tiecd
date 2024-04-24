@@ -80,7 +80,6 @@ class HelmCommand {
     }
     args.add('--install');
     args.add('--wait');
-    args.add('--history-max=1');
     var namespace = findNamespace(deployContext);
     if (namespace != null) {
       args.add("--namespace=$namespace");
@@ -102,18 +101,20 @@ class HelmCommand {
       args.add('--version');
       args.add(helmChart.version!);
     }
-    if (helmChart.flags != null) {
-      for (var flag in helmChart.flags!) {
-        args.add(flag);
-      }
-    }
+    var hasWait = false;
     if (helmChart.args.isNotNullNorEmpty) {
         var helmArgValue = varExpandByLineWithProperties(helmChart.args!, "", env);
         var splitter = CommandlineSplitter();
         var commandArgs = splitter.convert(helmArgValue);
         for (var commandArg in commandArgs) {
           args.add(commandArg);
+          if (commandArg.startsWith('--history-max')) {
+            hasWait = true;
+          }
         }
+    }
+    if (!hasWait) {
+      args.add('--history-max=1');
     }
     if (_config.traceCommands) {
       var outputString = 'helm ';

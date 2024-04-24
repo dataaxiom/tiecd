@@ -130,7 +130,6 @@ class HelmChart {
   List<String>? values;
   String? args;
   String? namespace;
-  List<String>? flags;
 
   HelmChart();
   factory HelmChart.fromJson(Map json) => _$HelmChartFromJson(json);
