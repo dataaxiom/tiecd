@@ -137,6 +137,16 @@ class HelmChart {
 }
 
 @JsonSerializable()
+class Ytt {
+  String? args;
+  List<String>? files;
+
+  Ytt();
+  factory Ytt.fromJson(Map json) => _$YttFromJson(json);
+  Map<String, dynamic> toJson() => _$YttToJson(this);
+}
+
+@JsonSerializable()
 class Coordinate {
   String? groupId;
   String? artifactId;
@@ -223,6 +233,7 @@ class Deploy {
   DeploymentMode? deploymentMode;
   List<MountFile>? mountFiles;
   List<String>? manifests; // file paths to file manifests
+  Ytt? ytt;
   Map<String, String>? env; // environment variables available during deployment time
   List<String>? envPropertyFiles;
 

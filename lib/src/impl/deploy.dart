@@ -16,6 +16,8 @@ import '../extensions.dart';
 class DeployExecutor extends BaseExecutor {
   DeployExecutor(super._config);
 
+  bool _firstApp = true;
+
   @override
   String getVerb() {
     return 'deploying';
@@ -109,7 +111,7 @@ class DeployExecutor extends BaseExecutor {
       List<Environment> environments =
           processEnvironments(tieFile.environments!);
 
-      if (config.traceTieFile) {
+      if (config.traceTieFile && _firstApp) {
         Log.info('Environments in use:');
         for (var environment in environments) {
           environment = environment.clone();
@@ -117,6 +119,7 @@ class DeployExecutor extends BaseExecutor {
               environment.toJson());
         }
       }
+      _firstApp = false;
 
       for (var environment in environments) {
         // lets take a clone copy to expand on that, to not effect the original
@@ -191,12 +194,18 @@ class DeployExecutor extends BaseExecutor {
           if (config.verbose) {
             Log.printObject(config,'app', 'final computed app definition', app.toJson());
           }
+
+          // cleanup
+          await handler.cleanup(context);
+
         } catch (error) {
           rethrow;
         } finally {
           await handler.logoff(context);
         }
       }
+
+
     } else {
       throw TieError('no environments defined');
     }

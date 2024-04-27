@@ -24,6 +24,12 @@ class Log {
     print("$redChar[TIECD] ERROR $message$resetChar");
   }
 
+  static void verbose(Config config, String message) {
+    if (config.verbose) {
+      print("[TIECD] $message");
+    }
+  }
+
   static void traceCommand(Config config, String command, List<String> args) {
     if (config.traceCommands) {
       var message = '$command ';

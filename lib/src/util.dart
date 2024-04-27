@@ -242,6 +242,11 @@ Future<void> runScript(TieContext tieContext, String script,
   }
 }
 
+String sanitizeDNSName(String value) {
+  value = value.replaceAll("[^-a-z0-9]", "");
+  value = value.toLowerCase();
+  return value;
+}
 
 // Get the home directory or null if unknown.
 String? homeDirectory() {
