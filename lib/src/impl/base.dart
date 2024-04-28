@@ -469,7 +469,7 @@ abstract class BaseExecutor {
     }
   }
 
-  run() async {
+  Future<void> run() async {
     try {
       if (init()) {
         var hasError = false;
