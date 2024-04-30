@@ -67,9 +67,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-          #'jdk8','jdk11','jdk17','jdk21','flutter','vercel'
         image: [
-          'jdk8'
+          'jdk8','jdk11','jdk17','jdk21','flutter','vercel'
         ]
     steps:
     - name: Check out repo
@@ -126,9 +125,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-          #'base','k8s','okd','gke','eks','aks','node18','node20'
         image: [
-          'k8s','node18','node20'
+          'base','k8s','okd','gke','eks','aks','node18','node20'
         ]
     steps:
 
