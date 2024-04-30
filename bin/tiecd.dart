@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
 import 'package:tiecd/src/api/types.dart';
-import 'package:tiecd/src/impl/build.dart';
-import 'package:tiecd/src/impl/deploy.dart';
+import 'package:tiecd/src/core/build.dart';
+import 'package:tiecd/src/core/deploy.dart';
 import 'package:tiecd/src/log.dart';
 import 'package:tiecd/src/util/options_printer.dart';
 
