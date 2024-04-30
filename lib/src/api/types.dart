@@ -81,7 +81,7 @@ class DeployContext extends TieContext {
 
   DeployHandler handler;
   Environment environment;
-  Set<String> deployedArifacts = {};
+  Set<String> deployedArtifacts = {};
 
   DeployContext(super.config, super.registries, this.handler, this.environment, super.app);
 }

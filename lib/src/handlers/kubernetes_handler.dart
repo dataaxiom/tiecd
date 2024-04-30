@@ -330,7 +330,7 @@ class KubernetesHandler implements DeployHandler {
               };
               auth = base64.encode(utf8.encode(jsonEncode(dockerCred)));
               var name = sanitizeDNSName(
-                  '${deployContext.app.name}-${deployContext.environment.registry!.host!}-regcred');
+                  '${deployContext.environment.registry!.host!}-regcred');
               var dockerSecret = {
                 "apiVersion": "v1",
                 "kind": "Secret",
@@ -358,7 +358,8 @@ class KubernetesHandler implements DeployHandler {
               KubeCtlCommand kubectl = KubeCtlCommand(_config, this);
               await kubectl.applyManifestByValue('dockerauthconfig.yaml',
                   dockerSecretYaml, deployContext.getEnv(), namespace);
-              deployContext.deployedArifacts.add('secret/$name');
+              namespace ??= 'default';
+              deployContext.environment.deployedArtifacts[namespace] = 'secret/$name';
             }
           }
         }
@@ -453,7 +454,7 @@ class KubernetesHandler implements DeployHandler {
       }
       // calc total config checksum
       var bytes = utf8.encode(checksum.toString());
-      var digest = md5.convert(bytes);
+      var digest = sha256.convert(bytes);
       deployContext.app.tiecdEnv!['TIECD_CONFIG_HASH'] = digest.toString();
       Log.info('adding TIECD_CONFIG_HASH to environment: $digest');
     }
@@ -473,7 +474,7 @@ class KubernetesHandler implements DeployHandler {
         if (!chartLog.startsWith("oci://") && chart.chart != null) {
           chartLog += " ${chart.chart!}";
         } else if (!chartLog.startsWith("oci://")) {
-          throw TieError('chart name can\'t be empty');
+          throw TieError("chart name can't be empty");
         }
 
         Log.info('applying helm chart: $chartLog');
@@ -517,7 +518,7 @@ class KubernetesHandler implements DeployHandler {
         var namespace = await buildNamespace(deployContext);
         // pre expand the file to check the deployment status
         if (!File('${_config.baseDir}/$templateFile').existsSync()) {
-          throw TieError('${_config.baseDir}/$templateFile doesn\'t exist');
+          throw TieError("${_config.baseDir}/$templateFile doesn't exist");
         }
         var expanded = expandFileByNameWithProperties(
             '${_config.baseDir}/$templateFile', deployContext.getEnv());
@@ -527,18 +528,18 @@ class KubernetesHandler implements DeployHandler {
         Map<String, Map<String, String>> revisions = {};
         for (var doc in docs) {
           Map yamlDoc = loadYaml(doc);
-          String? name = yamlDoc["metadata"]["name"];
+          String? name = yamlDoc['metadata']['name'];
           if (name != null) {
             String? nameSpaceInUse = namespace;
-            String? docNamespace = yamlDoc["metadata"]["namespace"];
+            String? docNamespace = yamlDoc['metadata']['namespace'];
             if (docNamespace != null) {
               nameSpaceInUse =
                   await buildNamespace(deployContext, namespace: docNamespace);
             }
-            nameSpaceInUse ??= "default";
+            nameSpaceInUse ??= 'default';
 
             // lets now get the revision
-            if (yamlDoc["kind"] == "Deployment") {
+            if (yamlDoc['kind'] == 'Deployment') {
               int currentVersion = 0;
               try {
                 var deployment = await _kubernetesClient!
@@ -558,7 +559,7 @@ class KubernetesHandler implements DeployHandler {
                 'version': currentVersion.toString(),
                 'namespace': nameSpaceInUse
               };
-            } else if (yamlDoc['kind'] == "StatefulSet") {
+            } else if (yamlDoc['kind'] == 'StatefulSet') {
               int currentVersion = 0;
               try {
                 var deployment = await _kubernetesClient!
@@ -600,7 +601,7 @@ class KubernetesHandler implements DeployHandler {
           var name = entry.value['name']!;
           var version = entry.value['version']!;
           var entryNamespace = entry.value['namespace'];
-          if (entry.key.startsWith("Deployment-")) {
+          if (entry.key.startsWith('Deployment-')) {
             var deployment = await _kubernetesClient!
                 .readAppsV1NamespacedDeployment(
                     name: name, namespace: entryNamespace!);
@@ -611,10 +612,10 @@ class KubernetesHandler implements DeployHandler {
                 Log.info(
                     'latest revision for deployment/$name = $currentVersion');
                 await kubectl.waitForRollout(
-                    entryNamespace, "Deployment", name, version);
+                    entryNamespace, 'Deployment', name, version);
               }
             }
-          } else if (entry.key.startsWith("StatefulSet-")) {
+          } else if (entry.key.startsWith('StatefulSet-')) {
             var statefulset = await _kubernetesClient!
                 .readAppsV1NamespacedStatefulSet(
                     name: name, namespace: entryNamespace!);
@@ -686,7 +687,7 @@ class KubernetesHandler implements DeployHandler {
       // services
 
       for (var element in currentResources) {
-        if (!deployContext.deployedArifacts.contains(element)) {
+        if (!deployContext.deployedArtifacts.contains(element)) {
           List<String> parts = element.controlledSplit('/');
           switch (parts[0]) {
             case 'secret':

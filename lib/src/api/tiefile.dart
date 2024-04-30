@@ -85,6 +85,11 @@ class Environment {
   factory Environment.fromJson(Map json) => _$EnvironmentFromJson(json);
   Map<String, dynamic> toJson() => _$EnvironmentToJson(this);
 
+  // used for namespace/environment wide shared resources
+  // key is namespace or environment name
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  Map<String,String> deployedArtifacts = {};
+
   // calculate a signature of the instance
   String signature() {
     StringBuffer buffer = StringBuffer();
@@ -108,9 +113,8 @@ class Environment {
         buffer.write(File(apiConfigFile!).readAsStringSync());
       }
     }
-    //print(buffer.toString());
     var bytes = utf8.encode(buffer.toString());
-    var digest = md5.convert(bytes);
+    var digest = sha256.convert(bytes);
     return digest.toString();
   }
 

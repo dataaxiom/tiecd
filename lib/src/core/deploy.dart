@@ -16,8 +16,8 @@ import '../extensions.dart';
 class DeployExecutor extends BaseExecutor {
   DeployExecutor(super._config);
 
-  Map<String, Environment>  _environments = {};
-  Map<String, DeployHandler> _deployHandlers = {};
+  final Map<String, Environment>  _environments = {};
+  final Map<String, DeployHandler> _deployHandlers = {};
 
   @override
   String getVerb() {

@@ -46,7 +46,7 @@ class KubeCtlCommand {
     // expand any variables in the manifest
     var expanded = expandFileByNameWithProperties(manifestFileName, properties);
     var bytes = utf8.encode(expanded);
-    var digest = md5.convert(bytes);
+    var digest = sha256.convert(bytes);
 
     var processedFilename = "${_config.scratchDir}/${Uuid().v4()}";
     try {
