@@ -16,7 +16,8 @@ import '../extensions.dart';
 class DeployExecutor extends BaseExecutor {
   DeployExecutor(super._config);
 
-  bool _firstApp = true;
+  Map<String, Environment>  _environments = {};
+  Map<String, DeployHandler> _deployHandlers = {};
 
   @override
   String getVerb() {
@@ -44,9 +45,7 @@ class DeployExecutor extends BaseExecutor {
     }
 
     // if we still don't have a name
-    if (environment.name == null && environment.label != null) {
-      environment.name = environment.label!;
-    } else if (environment.name == null && environment.apiUrl != null) {
+    if (environment.name == null && environment.apiUrl != null) {
       environment.name = environment.apiUrl;
     }
   }
@@ -65,6 +64,7 @@ class DeployExecutor extends BaseExecutor {
     String? environmentName = envVars['TIECD_ENVIRONMENT_LABEL'];
     if (environmentName.isNotNullNorEmpty) {
       // we have have a specific subset of environments to target/use
+      // filter the rest out
       Log.green('Using environment $environmentName');
       List<Environment> subEnvironments = [];
       // find the environments - there could be multiple physical locations for the
@@ -79,9 +79,8 @@ class DeployExecutor extends BaseExecutor {
     return environments;
   }
 
-  DeployHandler buildEnvironment(Environment environment) {
+  DeployHandler buildHandler(Environment environment) {
     DeployHandler handler;
-    preExpandEnvironment(environment);
     if (environment.apiType == null) {
       Log.printObject(config,'environment', 'Environment in use:', environment.toJson());
       throw TieError('provider type is not set');
@@ -98,9 +97,33 @@ class DeployExecutor extends BaseExecutor {
       throw TieError(
           'provider ${environment.apiType} type is not supported');
     }
-
     handler.expandEnvironment(environment);
     return handler;
+  }
+
+  @override
+  initialize(Tie tieFile) async {
+    List<Environment> environments =
+    processEnvironments(tieFile.environments!);
+    // build and initialize the environments for this tie file
+    for (var environment in environments) {
+      // save before handler login potentially changes the signature
+      var signature = environment.signature();
+      var clone = environment.clone();
+      // create one in the factory if we don't have one already?
+      if (_environments[signature] == null) {
+        preExpandEnvironment(clone);
+        DeployHandler handler = buildHandler(clone);
+        await handler.login(clone);
+        _environments[signature] = clone;
+        _deployHandlers[signature] = handler;
+        if (config.traceTieFile) {
+          Log.info('Environment in use:');
+          Log.printObject(config, 'environment', '',
+              clone.toJson());
+        }
+      }
+    }
   }
 
   @override
@@ -111,29 +134,24 @@ class DeployExecutor extends BaseExecutor {
       List<Environment> environments =
           processEnvironments(tieFile.environments!);
 
-      if (config.traceTieFile && _firstApp) {
-        Log.info('Environments in use:');
-        for (var environment in environments) {
-          environment = environment.clone();
-          Log.printObject(config, 'environment', '',
-              environment.toJson());
-        }
-      }
-      _firstApp = false;
-
+      // build and initialize the environments for this tie file
       for (var environment in environments) {
-        // lets take a clone copy to expand on that, to not effect the original
-        // on the next app round - simplifies expansion logic
-        environment = environment.clone();
-        DeployHandler handler = buildEnvironment(environment);
+        // save before handler login potentially changes the signature
+        var signature = environment.signature();
+
+        if (_deployHandlers[signature] == null) {
+          throw TieError('no handler setup for environment');
+        }
+        DeployHandler handler = _deployHandlers[signature]!;
+        Environment expandedEnvironment = _environments[signature]!;
 
         Log.green(
-            'processing app "${app.name!}" on ${environment.name!} environment');
+            'processing app "${app.name!}" on ${expandedEnvironment.name!} environment');
         List<ImageRegistry> imageReregistries = [];
         if (tieFile.registries != null) {
           imageReregistries = tieFile.registries!;
         }
-        var context = DeployContext(config, imageReregistries, handler, environment, app);
+        var context = DeployContext(config, imageReregistries, handler, expandedEnvironment, app);
         var namespace = findNamespace(context);
         app.tiecdEnv ??= {};
 
@@ -156,7 +174,6 @@ class DeployExecutor extends BaseExecutor {
         }
 
         try {
-          await handler.login(context);
 
           var action = app.deploy!.action;
           action ??= Action.install;
@@ -196,12 +213,10 @@ class DeployExecutor extends BaseExecutor {
           }
 
           // cleanup
-          await handler.cleanup(context);
+          await handler.cleanupResources(context);
 
         } catch (error) {
           rethrow;
-        } finally {
-          await handler.logoff(context);
         }
       }
 
@@ -209,5 +224,12 @@ class DeployExecutor extends BaseExecutor {
     } else {
       throw TieError('no environments defined');
     }
+  }
+
+  @override
+  cleanup() async {
+    _deployHandlers.forEach((key, value) {
+      value.logoff();
+    });
   }
 }

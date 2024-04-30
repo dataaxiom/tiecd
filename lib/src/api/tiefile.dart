@@ -1,4 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:crypto/crypto.dart';
 import 'package:json_annotation/json_annotation.dart';
+import 'package:tiecd/src/api/types.dart';
+import 'package:tiecd/src/extensions.dart';
 
 part 'tiefile.g.dart';
 
@@ -79,6 +85,35 @@ class Environment {
   factory Environment.fromJson(Map json) => _$EnvironmentFromJson(json);
   Map<String, dynamic> toJson() => _$EnvironmentToJson(this);
 
+  // calculate a signature of the instance
+  String signature() {
+    StringBuffer buffer = StringBuffer();
+    var payload = jsonEncode(toJson());
+    if (payload.isNotNullNorEmpty) {
+      buffer.write(payload);
+    }
+    if (apiClientKeyFile.isNotNullNorEmpty) {
+      if (!File(apiClientKeyFile!).existsSync()) {
+        throw TieError(
+            "api config file: $apiClientKeyFile does not exist");
+      } else {
+        buffer.write(File(apiClientKeyFile!).readAsStringSync());
+      }
+    }
+    if (apiConfigFile.isNotNullNorEmpty) {
+      if (!File(apiConfigFile!).existsSync()) {
+        throw TieError(
+            "api config file: $apiConfigFile does not exist");
+      } else {
+        buffer.write(File(apiConfigFile!).readAsStringSync());
+      }
+    }
+    //print(buffer.toString());
+    var bytes = utf8.encode(buffer.toString());
+    var digest = md5.convert(bytes);
+    return digest.toString();
+  }
+
   // basic clone to allow expansion to work with login/logff
   Environment clone() {
     Environment clone = Environment();
@@ -107,6 +142,11 @@ class Environment {
     clone.registry = registry; // not a deep copy
     return clone;
   }
+}
+
+// not part of tie file - used for impl
+class EnvironmentContext extends Environment {
+  Set<String> deployedArifacts = {};
 }
 
 enum Action { install, uninstall }

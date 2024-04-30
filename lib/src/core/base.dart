@@ -121,11 +121,20 @@ abstract class BaseExecutor {
     return input;
   }
 
+  initialize(Tie tieFile) async {
+    //subclasses override this method if necessary
+  }
+
   execute(Tie tieFile, App app) async {
     // subclasses override this method
   }
 
-  bool init() {
+  cleanup() async {
+    // subclasses override this method
+  }
+
+
+  bool directoryCheck() {
     var success = false;
 
     if (_config.baseDir == '') {
@@ -471,7 +480,7 @@ abstract class BaseExecutor {
 
   Future<void> run() async {
     try {
-      if (init()) {
+      if (directoryCheck()) {
         var hasError = false;
 
         for (var file in _fileList) {
@@ -481,6 +490,8 @@ abstract class BaseExecutor {
           mergeFile(tieFile, file, includedFiles);
 
           expandImageRegistries(tieFile);
+
+          await initialize(tieFile);
 
           if (tieFile.apps == null) {
             if (projectProvider != null) {
@@ -546,6 +557,7 @@ abstract class BaseExecutor {
                 rethrow;
               }
             }
+            cleanup();
           } else {
             throw TieError("no apps defined in $file");
           }
@@ -569,6 +581,7 @@ abstract class BaseExecutor {
     } catch (error) {
       rethrow;
     } finally {
+      cleanup();
       if (Directory(_config.scratchDir).existsSync()) {
         Directory(_config.scratchDir).deleteSync(recursive: true);
       }

@@ -34,7 +34,6 @@ class TieError implements Exception {
   TieError(this.cause);
 }
 
-
 class TieContext {
   Config config;
   List<ImageRegistry> registries;
@@ -114,8 +113,8 @@ void readProperties(Config config, String fileName, Map<String,String> propertie
 
 abstract class DeployHandler {
   void expandEnvironment(Environment environment);
-  Future<void> login(DeployContext deployContext);
-  Future<void> logoff(DeployContext deployContext);
+  Future<void> login(Environment environment);
+  Future<void> logoff();
   Future<void> handleImage(DeployContext deployContext);
   Future<void> handleConfig(DeployContext deployContext);
   Future<void> handleSecrets(DeployContext deployContext);
@@ -124,7 +123,7 @@ abstract class DeployHandler {
   Future<void> runScripts(DeployContext deployContext, List<String> scripts);
   Future<void> removeHelm(DeployContext deployContext);
   Map<String,String> getHandlerEnv();
-  Future<void> cleanup(DeployContext deployContext);
+  Future<void> cleanupResources(DeployContext deployContext);
 
   bool isDestinationRegistryAuthRequired(Environment environment);
   String getDestinationImageName(Environment environment, Image image);

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../api/tiefile.dart';
 import '../extensions.dart';
 import '../log.dart';
 import '../api/types.dart';
@@ -12,9 +13,8 @@ class EKSHandler extends KubernetesHandler {
   EKSHandler(super.config);
 
   @override
-  Future<void> login(DeployContext deployContext) async {
+  Future<void> login(Environment environment) async {
 
-    var environment = deployContext.environment;
     if (environment.name.isNullOrEmpty) {
       throw TieError("environment name has not been set, set to cluster name");
     }
@@ -45,20 +45,20 @@ class EKSHandler extends KubernetesHandler {
       throw TieError("failed to authenticate with eks");
     }
     // set the api config to generated kubeconfig
-    deployContext.environment.apiConfigFile = kubeConfigFilename;
+    environment.apiConfigFile = kubeConfigFilename;
     // expand the environment again now that a kubeconfig file has been created
-    await super.expandEnvironment(deployContext.environment);
-    await super.login(deployContext);
+    await super.expandEnvironment(environment);
+    await super.login(environment);
   }
 
   @override
-  Future<void> logoff(DeployContext deployContext) async {
+  Future<void> logoff() async {
     try {
       if (File('${config.scratchDir}/awsconfig').existsSync()) {
         File('${config.scratchDir}/awsconfig').deleteSync();
       }
     } finally {
-      await super.logoff(deployContext);
+      await super.logoff();
     }
   }
 
