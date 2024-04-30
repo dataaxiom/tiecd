@@ -502,7 +502,7 @@ abstract class BaseExecutor {
                 // check we have a container name
                 final appName = app.name;
                 if (appName == null) {
-                  throw TieError('app name can\'t be empty');
+                  throw TieError("app name can't be empty");
                 }
                 // we only use alpha-numeric lowercase chars - validate other chars?
                 if (appName.contains(RegExp("[^a-z0-9-]"))) {
