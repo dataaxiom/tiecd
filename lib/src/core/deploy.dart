@@ -157,6 +157,12 @@ class DeployExecutor extends BaseExecutor {
 
         if (namespace.isNotNullNorEmpty) {
           app.tiecdEnv!["TIECD_NAMESPACE"] = namespace!;
+          // setup deployed artifacts for this namespace
+          var deployedArtifacts = context.environment.deployedArtifacts[namespace];
+          if (deployedArtifacts == null) {
+            deployedArtifacts = {};
+            context.environment.deployedArtifacts[namespace] = deployedArtifacts;
+          }
         }
         if (environment.label.isNotNullNorEmpty) {
           app.tiecdEnv!["TIECD_ENVIRONMENT_LABEL"] = environment.label!;
@@ -228,8 +234,9 @@ class DeployExecutor extends BaseExecutor {
 
   @override
   cleanup() async {
-    _deployHandlers.forEach((key, value) {
-      value.logoff();
-    });
+    for (MapEntry<String, DeployHandler> item in _deployHandlers.entries) {
+      await item.value.cleanupEnvironment(config, _environments[item.key]!);
+      await item.value.logoff();
+    }
   }
 }

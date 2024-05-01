@@ -28,7 +28,6 @@ extension StringExtension on String {
 
     while (true) {
       var index = string.indexOf(separator, 0);
-      print(index);
       if (index == -1 || (max > 0 && result.length >= max)) {
         result.add(string);
         break;
@@ -40,7 +39,6 @@ extension StringExtension on String {
       }
       string = string.substring(index + separator.length);
     }
-
     return result;
   }
 }

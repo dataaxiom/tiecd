@@ -557,7 +557,7 @@ abstract class BaseExecutor {
                 rethrow;
               }
             }
-            cleanup();
+            await cleanup();
           } else {
             throw TieError("no apps defined in $file");
           }
@@ -581,7 +581,6 @@ abstract class BaseExecutor {
     } catch (error) {
       rethrow;
     } finally {
-      cleanup();
       if (Directory(_config.scratchDir).existsSync()) {
         Directory(_config.scratchDir).deleteSync(recursive: true);
       }

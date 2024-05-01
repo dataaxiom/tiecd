@@ -124,6 +124,7 @@ abstract class DeployHandler {
   Future<void> removeHelm(DeployContext deployContext);
   Map<String,String> getHandlerEnv();
   Future<void> cleanupResources(DeployContext deployContext);
+  Future<void> cleanupEnvironment(Config config, Environment environment);
 
   bool isDestinationRegistryAuthRequired(Environment environment);
   String getDestinationImageName(Environment environment, Image image);

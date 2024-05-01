@@ -88,7 +88,7 @@ class Environment {
   // used for namespace/environment wide shared resources
   // key is namespace or environment name
   @JsonKey(includeFromJson: false, includeToJson: false)
-  Map<String,String> deployedArtifacts = {};
+  Map<String,Set<String>> deployedArtifacts = {};
 
   // calculate a signature of the instance
   String signature() {
