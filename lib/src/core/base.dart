@@ -331,6 +331,23 @@ abstract class BaseExecutor {
               }
             }
 
+            if (includeApp.deploy!.ytt != null) {
+              if (app.deploy!.ytt == null) {
+                app.deploy!.ytt = Ytt();
+              }
+              if (includeApp.deploy!.ytt!.args != null) {
+                var args = app.deploy!.ytt!.args;
+                args ??= '';
+                app.deploy!.ytt!.args = '$args ${includeApp.deploy!.ytt!.args!}';
+              }
+              if (includeApp.deploy!.ytt!.files != null) {
+                app.deploy!.ytt!.files ??= [];
+                for (var file in includeApp.deploy!.ytt!.files!) {
+                  app.deploy!.ytt!.files!.add(file);
+                }
+              }
+            }
+
             if (includeApp.deploy!.env != null) {
               app.deploy!.env ??= {};
               includeApp.deploy!.env!.forEach((key, value) =>
@@ -396,6 +413,9 @@ abstract class BaseExecutor {
                 app.deploy!.errorScripts!.add(command);
               }
             }
+
+            app.deploy!.hostname ??= includeApp.deploy!.hostname;
+            app.deploy!.generateManifests ??= includeApp.deploy!.generateManifests;
           }
 
           if (includeApp.build != null) {

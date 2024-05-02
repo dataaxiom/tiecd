@@ -148,11 +148,6 @@ class Environment {
   }
 }
 
-// not part of tie file - used for impl
-class EnvironmentContext extends Environment {
-  Set<String> deployedArifacts = {};
-}
-
 enum Action { install, uninstall }
 
 @JsonSerializable()
@@ -294,7 +289,9 @@ class Deploy {
   List<String>? afterScripts;
   List<String>? errorScripts;
 
+  bool? generateManifests;
   String? namespace;
+  String? hostname;
 
   Deploy();
   factory Deploy.fromJson(Map json) => _$DeployFromJson(json);
