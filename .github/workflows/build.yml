@@ -59,8 +59,8 @@ jobs:
           rm dart.zip
           dart --disable-analytics
           sudo apt-get install -yq --no-install-recommends skopeo
-          wget -q https://github.com/carvel-dev/ytt/releases/download/v0.48.0/ytt-linux-amd64 -O /usr/bin/ytt
-          chmod +x /usr/bin/ytt
+          sudo wget -q https://github.com/carvel-dev/ytt/releases/download/v0.48.0/ytt-linux-amd64 -O /usr/bin/ytt
+          sudo chmod +x /usr/bin/ytt
       - uses: balchua/microk8s-actions@v0.3.2
         with:
           channel: "1.29/stable"
