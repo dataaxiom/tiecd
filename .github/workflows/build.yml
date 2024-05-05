@@ -14,47 +14,46 @@ jobs:
   tiecd-build-amd64:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/dataaxiom/dart-linux:latest
+      image: dart:3.3.4
     steps:
       - name: Check out repo
         uses: actions/checkout@v4
+      - name: Create output directory
+        run: mkdir -p dist/bin
       - name: Generate OSS licenses
-        run: dart pub run flutter_oss_licenses:generate.dart -o oss_licenses.json --json
+        run: dart pub run flutter_oss_licenses:generate.dart -o dist/oss_licenses.json --json
       - name: Dart build
         run: dart run build_runner build
       - name: Dart tests
         run: dart test test
       - name: Dart executable build
-        run: dart compile exe bin/tiecd.dart -o bin/tiecd
+        run: dart compile exe bin/tiecd.dart -o dist/bin/tiecd
+      - run: mkdir upload
+      - name: Tar build
+        run: tar -cvzf upload/tiecd-amd64.tgz dist
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build-artifacts-amd64
-          path: |
-            bin/tiecd
-            oss_licenses.json
+          path: upload
           retention-days: 1
 
   tiecd-build-arm64:
-    runs-on: [self-hosted, linux, ARM64]
-    container:
-      image: ghcr.io/dataaxiom/dart-linux:latest
+    runs-on: ubuntu-latest
     steps:
-      - name: Check out repo
-        uses: actions/checkout@v4
-      - name: Generate OSS licenses
-        run: dart pub run flutter_oss_licenses:generate.dart -o oss_licenses.json --json
-      - name: Dart build
-        run: dart run build_runner build
-      - name: Dart tests
-        run: dart test test
-      - name: Dart executable build
-        run: dart compile exe bin/tiecd.dart -o bin/tiecd.arm64
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - run: |
+          docker buildx build -t tiecd/tiecdtarball -f Dockerfile.arm64 --platform linux/arm64 -o type=tar,dest=bins.tar .
+      - run: mkdir tarballs
+      - run: tar -xvf bins.tar -C tarballs
+      - run: mkdir upload
+      - run: cp tarballs/tiecd-arm64.tgz upload/
+      - uses: actions/upload-artifact@v4
         with:
           name: build-artifacts-arm64
-          path: bin/tiecd.arm64
+          path: upload
           retention-days: 1
 
   # single arch images (amd64) using cekit fully
@@ -75,8 +74,6 @@ jobs:
         with:
           pattern: build-artifacts-*
           merge-multiple: true
-      - name: Set amd exec bit
-        run: chmod +x bin/tiecd
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v4
@@ -125,8 +122,6 @@ jobs:
         uses: docker/setup-buildx-action@v3
       - name: Install CEKit
         uses: cekit/actions-setup-cekit@v1.1.5
-      - name: Set amd exec bit
-        run: chmod +x bin/tiecd
       - name: Generate Dockerfile for ${{ matrix.image }} image
         run: scripts/generate-build.sh ${{ matrix.image }}
       - name: Extract metadata (tags, labels) for Docker

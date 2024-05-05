@@ -4,11 +4,13 @@ set -e
 # prime resources into base module
 mkdir images/modules/base/build
 
-cp bin/tiecd images/modules/base/build/.
-cp tiecd.arm64 images/modules/base/build/.
+# extract amd64 build
+tar --strip-components=1 -xvf tiecd-amd64.tgz
+cp bin/tiecd images/modules/base/build/tiecd
+cp oss_licenses.json images/modules/base/build/.
+
 cp bin/umoci-perm.sh images/modules/base/build/.
 cp LICENSE images/modules/base/build/.
-cp oss_licenses.json images/modules/base/build/.
 
 while read tag; do
   tagargs+=( --tag="$tag-$1" )

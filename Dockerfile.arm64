@@ -1,0 +1,23 @@
+FROM dart:3.3.4 AS build
+WORKDIR /build
+COPY . .
+
+ARG TARGETPLATFORM
+
+ENV FLUTTER_ROOT=.
+
+RUN set -eux; \
+    if [ "${TARGETPLATFORM}" = "linux/arm64" ]; then \
+        ARCH="arm64"; \
+    elif [ "${TARGETPLATFORM}" = "linux/amd64" ]; then \ 
+        ARCH="amd64"; \
+    fi; \
+    mkdir -p dist/bin; \
+    mkdir tarball; \
+    dart pub get; \
+    dart run build_runner build; \
+    dart compile exe bin/tiecd.dart -o dist/bin/tiecd; \
+    tar -cvzf tarball/tiecd-${ARCH}.tgz dist
+     
+FROM scratch
+COPY --from=build /build/tarball/* /
