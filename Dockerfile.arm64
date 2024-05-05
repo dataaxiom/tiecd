@@ -1,4 +1,6 @@
-FROM dart:3.3.4 AS build
+ARG DART_VERSION
+FROM dart:$DART_VERSION AS build
+
 WORKDIR /build
 COPY . .
 
