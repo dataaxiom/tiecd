@@ -58,6 +58,7 @@ jobs:
           export PATH=`pwd`/dart-sdk/bin:$PATH
           rm dart.zip
           dart --disable-analytics
+          sudo apt-get install -yq --no-install-recommends skopeo
       - uses: balchua/microk8s-actions@v0.3.2
         with:
           channel: "1.29/stable"
