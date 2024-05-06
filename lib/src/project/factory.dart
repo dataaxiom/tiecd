@@ -1,11 +1,10 @@
-import 'package:tiecd/src/api/tiefile.dart';
-import 'package:tiecd/src/project/flutter.dart';
-import 'package:tiecd/src/project/java.dart';
-import 'package:tiecd/src/project/nextjs.dart';
-import 'package:tiecd/src/project/node.dart';
-import 'package:tiecd/src/project/springboot.dart';
-
-import '../api/types.dart';
+import '../../api/types.dart';
+import '../../api/tiefile.dart';
+import '../project/flutter.dart';
+import '../project/java.dart';
+import '../project/nextjs.dart';
+import '../project/node.dart';
+import '../project/springboot.dart';
 
 ProjectProvider? buildProject() {
   // cycle through to find the project time

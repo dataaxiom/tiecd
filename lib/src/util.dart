@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:tiecd/src/extensions.dart';
-
-import 'api/types.dart';
+import '../api/types.dart';
+import 'extensions.dart';
 import 'log.dart';
 
 String varExpandByLine(String value, String fileExtension) {

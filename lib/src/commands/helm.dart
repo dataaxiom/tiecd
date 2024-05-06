@@ -1,14 +1,13 @@
 
 import 'dart:convert';
 import 'dart:io';
-
-import 'package:tiecd/src/extensions.dart';
 import 'package:uuid/uuid.dart';
 
-import '../api/tiefile.dart';
-import '../api/types.dart';
+import '../../api/tiefile.dart';
+import '../../api/types.dart';
 import '../log.dart';
 import '../util.dart';
+import '../extensions.dart';
 import '../util/command_splitter.dart';
 
 class HelmCommand {

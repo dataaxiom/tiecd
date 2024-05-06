@@ -2,8 +2,8 @@ import 'dart:io';
 
 import 'package:xml/xml.dart';
 
-import '../api/tiefile.dart';
-import '../api/types.dart';
+import '../../api/tiefile.dart';
+import '../../api/types.dart';
 import '../extensions.dart';
 import 'java.dart';
 

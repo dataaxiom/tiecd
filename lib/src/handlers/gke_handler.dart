@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:tiecd/src/api/types.dart';
 import 'package:uuid/uuid.dart';
 
-import '../api/tiefile.dart';
+import '../../api/types.dart';
+import '../../api/tiefile.dart';
 import '../extensions.dart';
 import '../log.dart';
 import 'kubernetes_handler.dart';

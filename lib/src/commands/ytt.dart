@@ -2,13 +2,11 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:args/command_runner.dart';
-import 'package:tiecd/src/extensions.dart';
-
-import '../api/tiefile.dart';
-import '../api/types.dart';
-import '../log.dart';
+import '../../api/tiefile.dart';
+import '../../api/types.dart';
 import '../util/command_splitter.dart';
+import '../log.dart';
+import '../extensions.dart';
 
 class YttCommand {
 

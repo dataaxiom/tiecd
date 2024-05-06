@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:yaml/yaml.dart';
 
-import '../api/tiefile.dart';
-import '../api/types.dart';
+import '../../api/tiefile.dart';
+import '../../api/types.dart';
 
 class FlutterProject extends ProjectProvider {
 

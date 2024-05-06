@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'tiefile.dart';
-import '../util.dart';
-import '../extensions.dart';
+import '../src/util.dart';
+import '../src/extensions.dart';
 
 class Config {
   String target = '';

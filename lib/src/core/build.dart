@@ -1,17 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:tiecd/src/commands/skopeo.dart';
-import 'package:tiecd/src/extensions.dart';
-
-import '../api/types.dart';
+import '../../api/tiefile.dart';
+import '../../api/types.dart';
 import '../commands/umoci.dart';
-import '../log.dart';
 import '../project/factory.dart';
+import '../log.dart';
 import '../util.dart';
-import '../api/tiefile.dart';
-import 'base.dart';
+import '../extensions.dart';
+import '../commands/skopeo.dart';
 import '../util/image_tag.dart';
+import 'base.dart';
 
 class BuildExecutor extends BaseExecutor {
   BuildExecutor(super._config);

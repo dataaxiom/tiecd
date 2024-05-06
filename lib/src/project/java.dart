@@ -1,9 +1,10 @@
 import 'dart:io';
+
 import 'package:meta/meta.dart';
 import 'package:xml/xml.dart';
 
-import '../api/tiefile.dart';
-import '../api/types.dart';
+import '../../api/tiefile.dart';
+import '../../api/types.dart';
 
 class JavaProject extends ProjectProvider {
 

@@ -1,16 +1,15 @@
 import 'dart:core';
 import 'dart:io';
-import 'package:json2yaml/json2yaml.dart';
 import 'package:meta/meta.dart';
 import 'package:path/path.dart';
-import 'package:tiecd/src/extensions.dart';
 import 'package:yaml/yaml.dart';
 import 'package:checked_yaml/checked_yaml.dart';
 
-import '../api/tiefile.dart';
-import '../api/types.dart';
-import '../log.dart';
+import '../../api/tiefile.dart';
+import '../../api/types.dart';
 import '../project/factory.dart';
+import '../log.dart';
+import '../extensions.dart';
 import '../util.dart';
 
 abstract class BaseExecutor {
@@ -54,7 +53,8 @@ abstract class BaseExecutor {
               _config.baseDir = path;
               found = true;
             } else {
-              throw TieError('file $file does not exist');
+              print ('is directory: $found $path');
+              throw TieError('file $file does not exist in $path');
             }
           }
         }
@@ -136,9 +136,9 @@ abstract class BaseExecutor {
 
   bool directoryCheck() {
     var success = false;
-
     if (_config.baseDir == '') {
       success = initTieDirectory('.');
+      print ('is directory: $success');
       if (!success) {
         success = initTieDirectory('tiecd');
       }
@@ -149,6 +149,7 @@ abstract class BaseExecutor {
       // check for tie file current directory
       success = initTieDirectory(_config.baseDir);
     }
+    print ('is directory: $success');
 
     if (success) {
       Log.info('using base directory: ${_config.baseDir}');
@@ -498,7 +499,7 @@ abstract class BaseExecutor {
     }
   }
 
-  Future<void> run() async {
+  Future<int> run() async {
     try {
       if (directoryCheck()) {
         var hasError = false;
@@ -593,10 +594,10 @@ abstract class BaseExecutor {
             throw TieError('the following apps were not found: $apps');
           }
         } else {
-          exit(1);
+          return 1;
         }
       } else {
-        exit(1);
+        return 1;
       }
     } catch (error) {
       rethrow;
@@ -605,6 +606,7 @@ abstract class BaseExecutor {
         Directory(_config.scratchDir).deleteSync(recursive: true);
       }
     }
+    return 0;
   }
 }
 

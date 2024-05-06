@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import '../api/tiefile.dart';
+import '../../api/tiefile.dart';
+import '../../api/types.dart';
 import '../extensions.dart';
 import '../log.dart';
-import '../api/types.dart';
-import '../util.dart';
 import 'kubernetes_handler.dart';
 
 class EKSHandler extends KubernetesHandler {

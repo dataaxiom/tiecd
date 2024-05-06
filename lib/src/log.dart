@@ -1,10 +1,9 @@
-
-
 import 'package:json2yaml/json2yaml.dart';
-import 'package:tiecd/src/extensions.dart';
-import 'package:tiecd/src/util.dart';
 
-import 'api/types.dart';
+import 'extensions.dart';
+import 'util.dart';
+
+import '../api/types.dart';
 
 const redChar = "\u001b[31m";
 const greenChar = "\u001b[32m";

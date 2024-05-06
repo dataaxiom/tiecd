@@ -2,12 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:tiecd/src/extensions.dart';
 import 'package:uuid/uuid.dart';
 
-import '../api/types.dart';
+import '../../api/types.dart';
 import '../util.dart';
 import '../log.dart';
+import '../extensions.dart';
 
 class KubeCtlResult {
   final String _output;

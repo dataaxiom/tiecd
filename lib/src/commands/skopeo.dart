@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
-import '../extensions.dart';
-import '../api/tiefile.dart';
-import '../api/types.dart';
+import '../../api/tiefile.dart';
+import '../../api/types.dart';
 import '../log.dart';
+import '../extensions.dart';
 import '../util/image_tag.dart';
 
 class SkopeoCommand {
@@ -115,9 +115,14 @@ class SkopeoCommand {
       args.add('token:$sourceToken');
       outputString += " --src-creds ****";
     }
-    if (sourceTlsVerify != null && sourceTlsVerify!) {
-      args.add('--src-tls-verify');
-      outputString += ' --src-tls-verify';
+    if (sourceTlsVerify != null) {
+      if (sourceTlsVerify == true) {
+        args.add('--src-tls-verify');
+        outputString += ' --src-tls-verify';
+      } else if (sourceTlsVerify == false) {
+        args.add('--src-tls-verify=false');
+        outputString += ' --src-tls-verify=false';
+      }
     }
 
     if (destinationUsername.isNotNullNorEmpty &&
@@ -135,9 +140,14 @@ class SkopeoCommand {
       args.add('token:$destinationToken');
       outputString += ' --dest-creds token:$destinationToken';
     }
-    if (destinationTlsVerify != null && destinationTlsVerify == true) {
-      args.add('--dest-tls-verify');
-      outputString += ' --dest-tls-verify';
+    if (destinationTlsVerify != null) {
+      if (destinationTlsVerify == true) {
+        args.add('--dest-tls-verify');
+        outputString += ' --dest-tls-verify';
+      } else  if (destinationTlsVerify == false) {
+        args.add('--dest-tls-verify=false');
+        outputString += ' --dest-tls-verify=false';
+      }
     }
 
     args.add('docker://$sourceImage');

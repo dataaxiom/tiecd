@@ -6,3 +6,4 @@ tiecd
 *.g.dart
 oss_licenses.json
 target/
+coverage/

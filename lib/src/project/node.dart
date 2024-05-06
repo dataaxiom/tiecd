@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import '../api/tiefile.dart';
-import '../api/types.dart';
+import '../../api/tiefile.dart';
+import '../../api/types.dart';
 import '../extensions.dart';
 
 class NodeProject extends ProjectProvider {

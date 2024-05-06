@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:io/io.dart';
 
-import '../api/types.dart';
+import '../../api/types.dart';
 import '../log.dart';
 
 class UmociCommand {

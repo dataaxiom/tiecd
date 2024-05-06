@@ -3,8 +3,9 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:json_annotation/json_annotation.dart';
-import 'package:tiecd/src/api/types.dart';
-import 'package:tiecd/src/extensions.dart';
+
+import 'types.dart';
+import '../src/extensions.dart';
 
 part 'tiefile.g.dart';
 
