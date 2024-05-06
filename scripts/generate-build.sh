@@ -10,7 +10,7 @@ cp bin/tiecd images/modules/base/build/tiecd
 cp oss_licenses.json images/modules/base/build/.
 
 # copy artifacts into build
-cp bin/umoci-perm.sh images/modules/base/build/.
+cp scripts/umoci-perm.sh images/modules/base/build/.
 cp LICENSE images/modules/base/build/.
 
 # just use cekit to build dockerfile then use buildx to build multi arch image

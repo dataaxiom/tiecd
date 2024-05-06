@@ -9,7 +9,7 @@ tar --strip-components=1 -xvf tiecd-amd64.tgz
 cp bin/tiecd images/modules/base/build/tiecd
 cp oss_licenses.json images/modules/base/build/.
 
-cp bin/umoci-perm.sh images/modules/base/build/.
+cp scripts/umoci-perm.sh images/modules/base/build/.
 cp LICENSE images/modules/base/build/.
 
 while read tag; do
