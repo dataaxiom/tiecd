@@ -292,6 +292,7 @@ class Deploy {
   bool? generateManifests;
   String? namespace;
   String? hostname;
+  String? replicas;
 
   Deploy();
   factory Deploy.fromJson(Map json) => _$DeployFromJson(json);
