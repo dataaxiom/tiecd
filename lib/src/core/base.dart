@@ -74,9 +74,7 @@ abstract class BaseExecutor {
     return found;
   }
 
-  bool setupTieFileList() {
-    var error = false;
-
+  void setupTieFileList() {
     // is there a fileorder.yml file, use that first
     var orderFileName = '';
     if (File('${_config.baseDir}/fileorder.yml').existsSync()) {
@@ -92,28 +90,22 @@ abstract class BaseExecutor {
         if (File("${_config.baseDir}/$file").existsSync()) {
           _fileList.add(file);
         } else {
-          Log.error('file $file referenced in $orderFileName does not exist');
-          error = true;
-          break;
+          throw TieError('file $file referenced in $orderFileName does not exist');
         }
       }
     }
 
-    if (!error) {
-      // now check for all other tie files
-      var files = Directory(_config.baseDir).listSync();
-      for (var file in files) {
-        var filename = basename(file.path);
-        if (filename.startsWith(_config.filePrefix) &&
-            (filename.endsWith(".yaml") || filename.endsWith(".yml"))) {
-          if (!_fileList.contains(filename)) {
-            _fileList.add(filename);
-          }
+    // now check for all other tie files
+    var files = Directory(_config.baseDir).listSync();
+    for (var file in files) {
+      var filename = basename(file.path);
+      if (filename.startsWith(_config.filePrefix) &&
+          (filename.endsWith(".yaml") || filename.endsWith(".yml"))) {
+        if (!_fileList.contains(filename)) {
+          _fileList.add(filename);
         }
       }
     }
-
-    return !error;
   }
 
   // process includes and spec inheritance
@@ -134,11 +126,10 @@ abstract class BaseExecutor {
   }
 
 
-  bool directoryCheck() {
+  void findTiecdDirectory() {
     var success = false;
     if (_config.baseDir == '') {
       success = initTieDirectory('.');
-      print ('is directory: $success');
       if (!success) {
         success = initTieDirectory('tiecd');
       }
@@ -149,7 +140,6 @@ abstract class BaseExecutor {
       // check for tie file current directory
       success = initTieDirectory(_config.baseDir);
     }
-    print ('is directory: $success');
 
     if (success) {
       Log.info('using base directory: ${_config.baseDir}');
@@ -163,44 +153,41 @@ abstract class BaseExecutor {
       }
     }
 
-    if (success && !fileSubset) {
+    if (!fileSubset) {
       // build the file list
-      success = setupTieFileList();
+      setupTieFileList();
     }
 
-    if (success) {
-      // process app name if set
-      if (_config.apps != '') {
-        var apps = _config.apps.split(',');
-        for (var app in apps) {
-          if (app == "all") {
-            _appList.clear();
-            break;
-          } else {
-            _appList.add(app);
-          }
-        }
-      }
 
-      if (_appList.isNotEmpty) {
-        _appListDeployment = true;
-        var currentApps = 'apps to be deployed: ';
-        for (var app in _appList) {
-          currentApps += "$app,";
+    // process app name if set
+    if (_config.apps != '') {
+      var apps = _config.apps.split(',');
+      for (var app in apps) {
+        if (app == "all") {
+          _appList.clear();
+          break;
+        } else {
+          _appList.add(app);
         }
-        currentApps = currentApps.substring(0, currentApps.length - 1);
-        Log.info(currentApps);
-      } else {
-        Log.info("${getVerb()} all apps");
-      }
-
-      // create scratch area
-      if (!Directory(_config.scratchDir).existsSync()) {
-        Directory(_config.scratchDir).createSync(recursive: true);
       }
     }
 
-    return success;
+    if (_appList.isNotEmpty) {
+      _appListDeployment = true;
+      var currentApps = 'apps to be deployed: ';
+      for (var app in _appList) {
+        currentApps += "$app,";
+      }
+      currentApps = currentApps.substring(0, currentApps.length - 1);
+      Log.info(currentApps);
+    } else {
+      Log.info("${getVerb()} all apps");
+    }
+
+    // create scratch area
+    if (!Directory(_config.scratchDir).existsSync()) {
+      Directory(_config.scratchDir).createSync(recursive: true);
+    }
   }
 
   void mergeFile(Tie tieFile, String yamlFile, Set<String> includedFiles) {
@@ -499,106 +486,105 @@ abstract class BaseExecutor {
     }
   }
 
-  Future<int> run() async {
+  Future<void> run() async {
     try {
-      if (directoryCheck()) {
-        var hasError = false;
+      findTiecdDirectory();
 
-        for (var file in _fileList) {
-          // process any includes
-          Set<String> includedFiles = {};
-          Tie tieFile = Tie();
-          mergeFile(tieFile, file, includedFiles);
+      var hasError = false;
 
-          expandImageRegistries(tieFile);
+      for (var file in _fileList) {
+        // process any includes
+        Set<String> includedFiles = {};
+        Tie tieFile = Tie();
+        mergeFile(tieFile, file, includedFiles);
 
-          await initialize(tieFile);
+        expandImageRegistries(tieFile);
 
-          if (tieFile.apps == null) {
-            if (projectProvider != null) {
-              // generate the very minimum app - gets expanded in build/deploy
-              var genApp = App();
-              if (projectProvider != null &&
-                  projectProvider!.name.isNotNullNorEmpty) {
-                genApp.name = projectProvider!.name;
-              }
-              tieFile.apps = [];
-              tieFile.apps!.add(genApp);
+        await initialize(tieFile);
+
+        if (tieFile.apps == null) {
+          if (projectProvider != null) {
+            // generate the very minimum app - gets expanded in build/deploy
+            var genApp = App();
+            if (projectProvider != null &&
+                projectProvider!.name.isNotNullNorEmpty) {
+              genApp.name = projectProvider!.name;
             }
-          }
-
-          if (tieFile.apps != null) {
-            _numberOfApps = tieFile.apps!.length;
-            for (var app in tieFile.apps!) {
-              try {
-                // check we have a container name
-                final appName = app.name;
-                if (appName == null) {
-                  throw TieError("app name can't be empty");
-                }
-                // we only use alpha-numeric lowercase chars - validate other chars?
-                if (appName.contains(RegExp("[^a-z0-9-]"))) {
-                  throw TieError(
-                      'app names can only use alpha numeric and lower case characters (DNS label standard RFC 1123), app name: \'${app
-                          .name}\' is invalid.');
-                }
-                // if we have an applist and it includes the app name or we are processing all apps which autoRun isn't false
-                if (_appList.isNotEmpty && _appList.contains(appName) ||
-                    !_appListDeployment && (app.autoRun == null || app.autoRun!)) {
-                  // expand the app if necessary
-                  Set<String> includedApps = {};
-                  mergeApp(tieFile, app, includedApps);
-                  // set label to app name if not set
-                  if (app.label == null) {
-                    app.label = appName;
-                  } else if (app.label!.contains(RegExp("[^a-z0-9-]"))) {
-                    throw TieError(
-                        'app label can only use alpha numeric and lower case characters (DNS label standard RFC 1123), app label: \'${app
-                            .label!}\' is invalid.');
-                  }
-                  // no execute the app
-                  await execute(tieFile, app);
-
-                  if (_appList.isNotEmpty) {
-                    _appList.remove(appName);
-                  }
-                }
-              } on TieError catch (te) {
-                if (!_config.ignoreErrors) {
-                  rethrow;
-                } else {
-                  hasError = true;
-                  Log.error(te.cause);
-                }
-              } on Exception {
-                rethrow;
-              } catch (e, s) {
-                Log.error('Error occurred: $e');
-                print('Stack trace:\n $s');
-                rethrow;
-              }
-            }
-            await cleanup();
-          } else {
-            throw TieError("no apps defined in $file");
+            tieFile.apps = [];
+            tieFile.apps!.add(genApp);
           }
         }
 
-        if (!hasError) {
-          // are there any apps not deployed?
-          if (_appList.isNotEmpty) {
-            var apps = '';
-            for (var app in _appList) {
-              apps += '$app ';
+        if (tieFile.apps != null) {
+          _numberOfApps = tieFile.apps!.length;
+          for (var app in tieFile.apps!) {
+            try {
+              // check we have a container name
+              final appName = app.name;
+              if (appName == null) {
+                throw TieError("app name can't be empty");
+              }
+              // we only use alpha-numeric lowercase chars - validate other chars?
+              if (appName.contains(RegExp("[^a-z0-9-]"))) {
+                throw TieError(
+                    'app names can only use alpha numeric and lower case characters (DNS label standard RFC 1123), app name: \'${app
+                        .name}\' is invalid.');
+              }
+              // if we have an applist and it includes the app name or we are processing all apps which autoRun isn't false
+              if (_appList.isNotEmpty && _appList.contains(appName) ||
+                  !_appListDeployment && (app.autoRun == null || app.autoRun!)) {
+                // expand the app if necessary
+                Set<String> includedApps = {};
+                mergeApp(tieFile, app, includedApps);
+                // set label to app name if not set
+                if (app.label == null) {
+                  app.label = appName;
+                } else if (app.label!.contains(RegExp("[^a-z0-9-]"))) {
+                  throw TieError(
+                      'app label can only use alpha numeric and lower case characters (DNS label standard RFC 1123), app label: \'${app
+                          .label!}\' is invalid.');
+                }
+                // no execute the app
+                await execute(tieFile, app);
+
+                if (_appList.isNotEmpty) {
+                  _appList.remove(appName);
+                }
+              }
+            } on TieError catch (te) {
+              if (!_config.ignoreErrors) {
+                rethrow;
+              } else {
+                hasError = true;
+                Log.error(te.cause);
+              }
+            } on Exception {
+              rethrow;
+            } catch (e, s) {
+              Log.error('Error occurred: $e');
+              print('Stack trace:\n $s');
+              rethrow;
             }
-            throw TieError('the following apps were not found: $apps');
           }
+          await cleanup();
         } else {
-          return 1;
+          throw TieError("no apps defined in $file");
+        }
+      }
+
+      if (!hasError) {
+        // are there any apps not deployed?
+        if (_appList.isNotEmpty) {
+          var apps = '';
+          for (var app in _appList) {
+            apps += '$app ';
+          }
+          throw TieError('the following apps were not found: $apps');
         }
       } else {
-        return 1;
+      // todo  return 1;
       }
+
     } catch (error) {
       rethrow;
     } finally {
@@ -606,7 +592,6 @@ abstract class BaseExecutor {
         Directory(_config.scratchDir).deleteSync(recursive: true);
       }
     }
-    return 0;
   }
 }
 

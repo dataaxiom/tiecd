@@ -1,0 +1,13 @@
+environments:
+- apiConfigFile: ${HOME}/.kube/config
+  registry:
+    host: localhost:32000    
+    tlsVerify: false
+
+apps:
+- name: nginx
+  image:
+    tag: nginx:latest
+  deploy:
+    namespace: nginx
+
