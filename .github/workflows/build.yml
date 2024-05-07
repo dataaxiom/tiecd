@@ -196,3 +196,13 @@ jobs:
           tags: ${{ steps.gentags.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.labels }}
+
+  delete-untagged-images:
+    name: delete-untagged-images
+    runs-on: ubuntu-latest
+    needs: [image-build-single-arch,image-build-multi-arch]
+    steps:
+      - uses: dataaxiom/ghcr-cleanup-action@v1.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+

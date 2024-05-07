@@ -1,0 +1,17 @@
+name: daily-cleanup
+run-name: daily-cleanup
+on:
+  # every day at 01:30am
+  schedule:
+    - cron: '30 1 * * *'
+  # or manually
+  workflow_dispatch:
+
+jobs:
+  delete-untagged-images:
+    name: Delete Untagged Images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dataaxiom/ghcr-cleanup-action@v1.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN}}
