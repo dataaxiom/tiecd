@@ -12,6 +12,6 @@ jobs:
     name: Delete Untagged Images
     runs-on: ubuntu-latest
     steps:
-      - uses: dataaxiom/ghcr-cleanup-action@v1
+      - uses: dataaxiom/ghcr-cleanup-action@v1.0.9
         with:
           token: ${{ secrets.GITHUB_TOKEN}}
