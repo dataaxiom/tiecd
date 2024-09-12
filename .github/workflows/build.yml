@@ -4,11 +4,11 @@ on:
   push:
     branches: ["*"]
     tags:
-      - "v*"
+      - "*"
 
 env:
   FLUTTER_ROOT: dummy
-  DART_VERSION: 3.3.4
+  DART_VERSION: 3.5.2
 
 jobs:
 
@@ -30,6 +30,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Dart code gen
         run: |
+          dart pub get
           mkdir -p dist/bin
           dart pub run flutter_oss_licenses:generate.dart -o dist/oss_licenses.json --json
           dart run build_runner build
@@ -61,7 +62,7 @@ jobs:
           sudo apt-get install -yq --no-install-recommends skopeo
           sudo wget -q https://github.com/carvel-dev/ytt/releases/download/v0.48.0/ytt-linux-amd64 -O /usr/bin/ytt
           sudo chmod +x /usr/bin/ytt
-      - uses: balchua/microk8s-actions@v0.3.2
+      - uses: balchua/microk8s-actions@v0.4.3
         with:
           channel: "1.29/stable"
           addons: '["dns", "hostpath-storage", "registry"]'
@@ -113,13 +114,16 @@ jobs:
           merge-multiple: true
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/tiecd
+          images: ghcr.io/${{ github.repository_owner }}/tiecd/${{ matrix.image }}
+          flavor: |
+            latest=false
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
+            type=pep440,pattern={{version}}
+            type=pep440,pattern={{major}}.{{minor}}
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
@@ -129,9 +133,9 @@ jobs:
       - name: Install CEKit
         uses: cekit/actions-setup-cekit@v1.1.5
       - name: Save Tags
-        run: echo "${{ steps.meta.outputs.tags }}" >> tags.txt
+        run: echo -e "${{ steps.meta.outputs.tags }}" >> tags.txt
       - name: Save Labels
-        run: echo "${{ steps.meta.outputs.labels }}" >> labels.txt
+        run: echo -e "${{ steps.meta.outputs.labels }}" >> labels.txt
       - name: Build ${{ matrix.image }} Image
         run: scripts/build-image.sh ${{ matrix.image }}
 
@@ -165,21 +169,18 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/tiecd
+          images: ghcr.io/${{ github.repository_owner }}/tiecd/${{ matrix.image }}
           labels: |
             org.opencontainers.image.vendor=Dataaxiom Inc
+          flavor: |
+            latest=false
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
+            type=pep440,pattern={{version}}
+            type=pep440,pattern={{major}}.{{minor}}
       - name: Save Tags
         run: echo "${{ steps.meta.outputs.tags }}" >> tags.txt
-      - name: Generate Image Tags
-        id: gentags
-        run: |
-          tags=$(scripts/generate-tags.sh ${{ matrix.image }})
-          echo "tags=$tags" >> $GITHUB_OUTPUT
-          echo Using tags $image_tags
       - name: Log in to the Container registry
         uses: docker/login-action@v3
         with:
@@ -193,16 +194,26 @@ jobs:
           push: true
           platforms: linux/arm64,linux/amd64
           provenance: false
-          tags: ${{ steps.gentags.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.labels }}
+      - name: Retag ${{ matrix.image }} Image
+        run: scripts/retag-image.sh ${{ matrix.image }}
 
-  delete-untagged-images:
-    name: delete-untagged-images
+  # cleans up untagged images, keeps all versioned images and main, and 3 rc images
+  cleanup-images:
+    name: cleanup-images
     runs-on: ubuntu-latest
+    concurrency:
+      group: cleanup-images
     needs: [image-build-single-arch,image-build-multi-arch]
     steps:
       - uses: dataaxiom/ghcr-cleanup-action@v1.0.11
         with:
+          packages: "tiecd/jdk8,tiecd/jdk11,tiecd/jdk17,tiecd/jdk21,tiecd/vercel,tiecd/base,tiecd/k8s,tiecd/okd,tiecd/gke,tiecd/eks,tiecd/aks,tiecd/node18,tiecd/node20"
+          delete-untagged: true
+          keep-n-tagged: 3
+          exclude-tags: "^\\d+\\.\\d+\\.\\d+$|^latest$|^main$"
+          use-regex: true
           token: ${{ secrets.GITHUB_TOKEN }}
 
