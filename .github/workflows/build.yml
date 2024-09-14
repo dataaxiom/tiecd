@@ -10,6 +10,12 @@ env:
   FLUTTER_ROOT: dummy
   DART_VERSION: 3.5.2
 
+permissions:
+  id-token: write
+  contents: read
+  attestations: write
+  packages: write
+
 jobs:
 
   dart-set-image:
@@ -94,62 +100,17 @@ jobs:
           path: upload
           retention-days: 1
 
-  # single arch images (amd64) using cekit fully
-  image-build-single-arch:
-    runs-on: ubuntu-latest
-    needs: [tiecd-build-amd64,tiecd-embedded-tests]
-    strategy:
-      fail-fast: false
-      matrix:
-        image: [
-          "jdk8","jdk11","jdk17","jdk21","vercel"
-        ]
-    steps:
-      - name: Check out repo
-        uses: actions/checkout@v4
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: build-artifacts-*
-          merge-multiple: true
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/tiecd/${{ matrix.image }}
-          flavor: |
-            latest=false
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=pep440,pattern={{version}}
-            type=pep440,pattern={{major}}.{{minor}}
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install CEKit
-        uses: cekit/actions-setup-cekit@v1.1.5
-      - name: Save Tags
-        run: echo -e "${{ steps.meta.outputs.tags }}" >> tags.txt
-      - name: Save Labels
-        run: echo -e "${{ steps.meta.outputs.labels }}" >> labels.txt
-      - name: Build ${{ matrix.image }} Image
-        run: scripts/build-image.sh ${{ matrix.image }}
-
   # multi arch builds, uses cekit to generate dockerfile, then buildx for actual build
   # as cekit doesn't currently support buildx
   
-  image-build-multi-arch:
+  image-build:
     runs-on: ubuntu-latest
     needs: [tiecd-build-amd64,tiecd-build-arm64,tiecd-embedded-tests]
     strategy:
       fail-fast: false
       matrix:
         image: [
-          "base","k8s","okd","gke","eks","aks","node18","node20"
+          "jdk8","jdk11","jdk17","jdk21","base","k8s","okd","gke","eks","aks","node18","node20","vercel"
         ]
     steps:
       - name: Check out repo
@@ -188,25 +149,33 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build and push Docker images
+        id: docker-build
         uses: docker/build-push-action@v5
         with:
           context: target/image
           push: true
           platforms: linux/arm64,linux/amd64
-          provenance: false
+          provenance: true 
+          sbom: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.labels }}
       - name: Retag ${{ matrix.image }} Image
         run: scripts/retag-image.sh ${{ matrix.image }}
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ghcr.io/${{ github.repository_owner }}/tiecd/${{ matrix.image }}
+          subject-digest: ${{ steps.docker-build.outputs.digest }}
+          push-to-registry: true
 
   # cleans up untagged images, keeps all versioned images and main, and 3 rc images
   cleanup-images:
     name: cleanup-images
     runs-on: ubuntu-latest
+    needs: [image-build]
     concurrency:
       group: cleanup-images
-    needs: [image-build-single-arch,image-build-multi-arch]
     steps:
       - uses: dataaxiom/ghcr-cleanup-action@v1.0.11
         with:
@@ -216,4 +185,3 @@ jobs:
           exclude-tags: "^\\d+\\.\\d+\\.\\d+$|^latest$|^main$"
           use-regex: true
           token: ${{ secrets.GITHUB_TOKEN }}
-
