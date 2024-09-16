@@ -160,8 +160,6 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.labels }}
-      - name: Retag ${{ matrix.image }} Image
-        run: scripts/retag-image.sh ${{ matrix.image }}
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v1
         with:
