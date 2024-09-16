@@ -177,7 +177,7 @@ jobs:
     concurrency:
       group: cleanup-images
     steps:
-      - uses: dataaxiom/ghcr-cleanup-action@v1.0.11
+      - uses: dataaxiom/ghcr-cleanup-action@v1.0.13
         with:
           packages: "tiecd/jdk8,tiecd/jdk11,tiecd/jdk17,tiecd/jdk21,tiecd/vercel,tiecd/base,tiecd/k8s,tiecd/okd,tiecd/gke,tiecd/eks,tiecd/aks,tiecd/node18,tiecd/node20"
           delete-untagged: true
