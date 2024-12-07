@@ -1,0 +1,9 @@
+schema_version: 1
+version: 1.0.0
+name: google.cli
+description: "Add the Google google-cloud-cli packages"
+packages:
+  manager: apt-get
+  install:
+    - google-cloud-cli=503.0.0-0
+    - google-cloud-cli-gke-gcloud-auth-plugin=503.0.0-0

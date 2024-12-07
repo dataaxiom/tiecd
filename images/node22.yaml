@@ -7,7 +7,7 @@ from: "ubuntu:22.04"
 
 envs:
   - name: TIECD_NODE_VERSION
-    value: "18"
+    value: "22"
 
 modules:
   repositories:
@@ -15,7 +15,7 @@ modules:
   install:
     - name: base
     - name: node.package.repo 
-      version: "18"
+      version: "22"
     - name: node
     - name: yarn
     - name: pnpm

@@ -5,4 +5,4 @@ description: "Add the Google kubectl package"
 packages:
   manager: apt-get
   install:
-    - kubectl=1:468.0.0-0
+    - kubectl=1:503.0.0-0

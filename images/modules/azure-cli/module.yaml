@@ -5,5 +5,5 @@ description: "Install the Microsoft azure cli"
 packages:
   manager: apt-get
   install:
-    - azure-cli=2.58.0-1~jammy
+    - azure-cli=2.67.0-1~jammy
 

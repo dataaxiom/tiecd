@@ -14,4 +14,4 @@ modules:
     - name: helm
     - name: google.package.repo
     - name: kubectl
-    - name: google.cloud.sdk
+    - name: google.cli
